@@ -19,6 +19,9 @@ class Handlers:
         self.pashalko = "Взаиморозщеты🦗"
         self.set_commands()
         
+    def log(self, message):
+        self.bot.send_message(self.admin_id, message)
+        
     def set_commands(self):
         self.bot.delete_my_commands()
         commands = [telebot.types.BotCommand(command, description) for command, description in self.bot_commands.items()]
@@ -34,6 +37,7 @@ class Handlers:
         user_id = message.from_user.id
         self.database.add_user(username, user_id)        
         self.bot.reply_to(message, "Поздравляем! Вы подписались на KyZma InVest.", reply_markup=self.create_keyboard())
+        self.log(f"User @{username} started the bot")
         
     def send_help(self, message):
         help_text = "Доступные команды: \n"
@@ -41,6 +45,7 @@ class Handlers:
             help_text += "/" + key + ": "
             help_text += self.bot_commands[key] + "\n"
         self.bot.reply_to(message, help_text)
+        self.log(f"User @{message.from_user.username} used /help")
         
     def farm_coin(self, message):
         user_id = message.from_user.id
@@ -63,6 +68,7 @@ class Handlers:
                 self.database.update_user(user_id, user)
                 print(f"User {user['nickname']} farmed {coins} coins. Total: {user['coins']}")
                 self.bot.reply_to(message, f"Вы заработали {coins} KyZmaCoin! У вас теперь {user['coins']} KyZmaCoin.")
+                self.log(f"User @{message.from_user.username} farmed {coins} coins.\nTotal: {user['coins']} coins.")
                 
     def send_top_users(self, message):
         users = self.database.find_users()
@@ -73,6 +79,7 @@ class Handlers:
         if not sorted_users:
             top_users_message = "Пока нет пользователей."
         self.bot.reply_to(message, top_users_message)
+        self.log(f"User @{message.from_user.username} used /top")
         
     def vzaimorozchety(self, message):
         self.bot.reply_to(message, "Взаиморозщеты🦗")
