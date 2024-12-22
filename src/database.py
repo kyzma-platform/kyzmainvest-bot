@@ -35,7 +35,8 @@ class MongoDB:
                 'user_id': user_id,
                 'nickname': username,
                 'coins': 0,
-                'last_farm_time': 0
+                'last_farm_time': 0,
+                'access_level': 'user'
             }
             self.users_collection.insert_one(new_user)
             print(f"User {username} added")
