@@ -23,7 +23,7 @@ class Handlers:
     def log(self, message, user_id):
         """ Log messages to the admin in bot chat """
         user_access_level = self.database.get_access_level(user_id)
-        if user_access_level == "admin":
+        if user_access_level == "user":
             self.bot.send_message(self.admin_id, message)
         
     def set_commands(self):
