@@ -220,9 +220,9 @@ class Handlers:
         def give(message):
             self.give_coins(message)
             
-        @self.bot.message_handler(commands=['rozdacha_tyshchi'])
-        def rozdacha(message):
-            self.give_all_users_1000_coins(message)
+        # @self.bot.message_handler(commands=['rozdacha_tyshchi'])
+        # def rozdacha(message):
+        #     self.give_all_users_1000_coins(message)
             
         @self.bot.message_handler(func=lambda message: message.text == self.pashalko)
         def handle_text(message):
