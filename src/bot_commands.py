@@ -3,4 +3,5 @@ bot_commands = {
     'help': "Помощь",
     'farm': "Фармить KyZmaCoin",
     'top': "Топ-10 владельцев KyZmaCoin",
+    'slot': "Играть в слоты",
 }
