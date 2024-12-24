@@ -128,24 +128,36 @@ class Handlers:
             self.bot.reply_to(message, "Вас нет в базе данных. Напишите /start")
             return
 
+        # Check if the user's balance is less than or equal to 0
+        if user['coins'] <= 0:
+            self.bot.reply_to(message, "У вас недостаточно KyZmaCoin для игры. Пожалуйста, заработайте монеты.")
+            return
+
+        # Send a dice roll animation to simulate the slot machine spinning
         self.bot.send_dice(message.chat.id, emoji="🎰")
         time.sleep(1)
-        
+
         fruits = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓", "🍍", "🍑"]
 
+        # Generate 3 random fruits for the slot machine result
         results = [random.choice(fruits) for _ in range(3)]
 
-        if random.random() < 0.2: 
+        # 20% chance of all three fruits being the same
+        if random.random() < 0.2:
             selected_fruit = random.choice(fruits)
             results = [selected_fruit] * 3
 
+        # Build the result message
         message_result = f"Вы прокрутили слоты и получили: {results[0]} - {results[1]} - {results[2]}\n"
 
+        # Check if the user wins
         if results[0] == results[1] == results[2]:
             win_amount = 0
+            # 5% chance of winning a large amount
             if random.random() < 0.05:
                 win_amount = 250
             else:
+                # Normal win range between 15 and 40
                 win_amount = random.randint(15, 40)
             user['coins'] += win_amount
             message_result += f"Поздравляем! Вы выиграли {win_amount} KyZmaCoin! У вас теперь {user['coins']} KyZmaCoin."
@@ -154,9 +166,13 @@ class Handlers:
             user['coins'] -= lose_amount
             message_result += f"Увы, вы проиграли {lose_amount} KyZmaCoin. У вас теперь {user['coins']} KyZmaCoin."
 
+        # Update the user's balance in the database
         self.database.update_user(user_id, user)
+
+        # Send the result to the user
         self.bot.reply_to(message, message_result)
         self.log(f"User @{message.from_user.username} played the slot machine", user_id)
+
 
         
     def vzaimorozchety(self, message):
