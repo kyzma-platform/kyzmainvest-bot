@@ -46,6 +46,7 @@ class Handlers:
         self.bot.reply_to(message, "Поздравляем! Вы подписались на KyZma InVest.", reply_markup=self.create_keyboard())
         self.log(f"User @{username} started the bot", user_id)
         
+        
     def send_help(self, message):
         """ Send available commands to the user """
         help_text = "Доступные команды: \n"
@@ -109,15 +110,29 @@ class Handlers:
         self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
 
         
-    def give_coins(self, message):
-        user = self.database.find_user(int(self.admin_id))
-        if user is None:
-            print(user)
-            self.bot.reply_to(message, 'cant find')
-            
-        user["coins"] += 9999
-        print(user)
-        self.database.update_user(self.admin_id, user)        
+    def give_all_users_1000_coins(self, message):
+        """ Give 1000 coins to all users """
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, "Иди нахуй ты не админ.")
+        # Retrieve all users from the database
+        users = self.database.find_users()
+        chat_id = message.chat.id
+
+        # Iterate through all users and add 1000 coins
+        for user in users:
+        # Check if the user is not the admin (just in case you want to exclude admin from getting coins)
+            if user['user_id'] == int(self.admin_id):
+                updated_user = {
+                    "coins": user["coins"] + 1000  # Update only the 'coins' field
+                }
+
+            # Update the user's coins using their user_id (no modification to _id)
+            self.database.update_user(user['user_id'], updated_user)
+        
+        # Notify the admin that the operation has been completed
+        self.bot.send_message(chat_id, f"<b>Увага! Роздача ПОТУЖНОЇ ТИСЯЧІ для гемблінгу!</b>", parse_mode="HTML")
+        self.log(f"Admin @{message.from_user.username} gave 1000 coins to all users", message.from_user.id)
+   
 
     def slot_machine(self, message):
         """ Simple Slot Machine Game with fruits as the results"""
@@ -204,6 +219,10 @@ class Handlers:
         @self.bot.message_handler(commands=['give'])
         def give(message):
             self.give_coins(message)
+            
+        @self.bot.message_handler(commands=['rozdacha_tyshchi'])
+        def rozdacha(message):
+            self.give_all_users_1000_coins(message)
             
         @self.bot.message_handler(func=lambda message: message.text == self.pashalko)
         def handle_text(message):
