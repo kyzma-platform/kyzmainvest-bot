@@ -57,6 +57,11 @@ class Handlers:
         
     def farm_coin(self, message):
         """ Farm coins for the user"""
+        # coins
+        common_coins = random.randint(5, 30)
+        rare_coins = 50
+        coins = 0
+        
         user_id = message.from_user.id
         print(user_id)
         current_time = time.time()
@@ -72,7 +77,10 @@ class Handlers:
                 self.bot.reply_to(message, f"Вы можете фармить снова через {int(remaining_minutes)} минут и {int(remaining_seconds)} секунд.")
                 self.log(f"User @{message.from_user.username} farmed too early", user_id)
             else:
-                coins = random.randint(1, 30)
+                if random.random() < 0.1:
+                    coins = rare_coins
+                else:
+                    coins = common_coins
                 user['coins'] += coins
                 user['last_farm_time'] = current_time
                 self.database.update_user(user_id, user)
@@ -81,16 +89,75 @@ class Handlers:
                 self.log(f"User @{message.from_user.username} farmed {coins} coins.\nTotal: {user['coins']} coins.", user_id)
                 
     def send_top_users(self, message):
-        """ Send top 10 users by coins """
+        """ Send top 10 users by coins, excluding the admin """
         users = self.database.find_users()
+        
+        users = [user for user in users if user['user_id'] != int(self.admin_id)]
+        
         sorted_users = sorted(users, key=lambda x: x['coins'], reverse=True)
+        
         top_users_message = "Топ-10 пользователей по KyZmaCoin:\n"
+        
         for i, user in enumerate(sorted_users[:10], start=1):
             top_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
+        
         if not sorted_users:
             top_users_message = "Пока нет пользователей."
+        
+        # Send the message
         self.bot.reply_to(message, top_users_message)
         self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
+
+        
+    def give_coins(self, message):
+        user = self.database.find_user(int(self.admin_id))
+        if user is None:
+            print(user)
+            self.bot.reply_to(message, 'cant find')
+            
+        user["coins"] += 9999
+        print(user)
+        self.database.update_user(self.admin_id, user)        
+
+    def slot_machine(self, message):
+        """ Simple Slot Machine Game with fruits as the results"""
+        user_id = message.from_user.id
+        user = self.database.find_user(user_id)
+
+        if user is None:
+            self.bot.reply_to(message, "Вас нет в базе данных. Напишите /start")
+            return
+
+        self.bot.send_dice(message.chat.id, emoji="🎰")
+        time.sleep(1)
+        
+        fruits = ["🍒", "🍋", "🍊", "🍉", "🍇", "🍓", "🍍", "🍑"]
+
+        results = [random.choice(fruits) for _ in range(3)]
+
+        if random.random() < 0.2: 
+            selected_fruit = random.choice(fruits)
+            results = [selected_fruit] * 3
+
+        message_result = f"Вы прокрутили слоты и получили: {results[0]} - {results[1]} - {results[2]}\n"
+
+        if results[0] == results[1] == results[2]:
+            win_amount = 0
+            if random.random() < 0.05:
+                win_amount = 250
+            else:
+                win_amount = random.randint(15, 40)
+            user['coins'] += win_amount
+            message_result += f"Поздравляем! Вы выиграли {win_amount} KyZmaCoin! У вас теперь {user['coins']} KyZmaCoin."
+        else:
+            lose_amount = random.randint(10, 25)
+            user['coins'] -= lose_amount
+            message_result += f"Увы, вы проиграли {lose_amount} KyZmaCoin. У вас теперь {user['coins']} KyZmaCoin."
+
+        self.database.update_user(user_id, user)
+        self.bot.reply_to(message, message_result)
+        self.log(f"User @{message.from_user.username} played the slot machine", user_id)
+
         
     def vzaimorozchety(self, message):
         """ Взаиморозщеты🦗 """
@@ -113,6 +180,14 @@ class Handlers:
         @self.bot.message_handler(commands=['top'])
         def top(message):
             self.send_top_users(message)
+            
+        @self.bot.message_handler(commands=['slot'])
+        def slot(message):
+            self.slot_machine(message)
+            
+        @self.bot.message_handler(commands=['give'])
+        def give(message):
+            self.give_coins(message)
             
         @self.bot.message_handler(func=lambda message: message.text == self.pashalko)
         def handle_text(message):

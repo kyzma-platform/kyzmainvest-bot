@@ -23,7 +23,6 @@ class MongoDB:
         """ Find user by id. Returns user dictionary or None """
         user = self.users_collection.find_one({"user_id": user_id})
         if user:
-            print(user)
             return user
         else:
             return None
@@ -55,7 +54,6 @@ class MongoDB:
         """ Returns the access level of the user. Returns: 'admin', 'user' or None"""
         user = self.find_user(user_id)
         if user:
-            print(user['access_level'])
             return user['access_level']
         else:
             print("User not found")
