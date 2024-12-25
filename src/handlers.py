@@ -22,10 +22,7 @@ class Handlers:
         self.set_commands()
         
         # farm and slot settigs
-        self.farm_common_coins = random.randint(5, 30)
         self.farm_rare_coins = 50
-        self.slot_win_coins = random.randint(15, 40)
-        self.slot_lose_coins = random.randint(10, 25)
         self.farm_rare_chance = 0.1
         self.slot_jackpot_chance = 0.05
         self.slot_win_chance = 0.2
@@ -96,7 +93,7 @@ class Handlers:
                 self.log(f"User @{message.from_user.username} farmed too early", user_id)
             else:
                 if random.random() < self.farm_rare_chance:
-                    coins = self.farm_rare_coins
+                    coins = random.randint(5, 30)
                 else:
                     coins = self.farm_common_coins
                 user['coins'] += coins
@@ -191,11 +188,11 @@ class Handlers:
                 win_amount = 250
             else:
                 # Normal win range between 15 and 40
-                win_amount = self.slot_win_coins
+                win_amount = random.randint(15, 40)
             user['coins'] += win_amount
             message_result += f"Поздравляем! Вы выиграли {win_amount} KyZmaCoin! У вас теперь {user['coins']} KyZmaCoin."
         else:
-            lose_amount = self.slot_lose_coins
+            lose_amount = random.randint(10, 25)
             user['coins'] -= lose_amount
             message_result += f"Увы, вы проиграли {lose_amount} KyZmaCoin. У вас теперь {user['coins']} KyZmaCoin."
 
