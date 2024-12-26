@@ -93,9 +93,9 @@ class Handlers:
                 self.log(f"User @{message.from_user.username} farmed too early", user_id)
             else:
                 if random.random() < self.farm_rare_chance:
-                    coins = random.randint(5, 30)
+                    coins = self.farm_rare_coins
                 else:
-                    coins = self.farm_common_coins
+                    coins = random.randint(5, 30)
                 user['coins'] += coins
                 user['last_farm_time'] = current_time
                 self.database.update_user(user_id, user)
