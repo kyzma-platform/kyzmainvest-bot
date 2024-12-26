@@ -2,8 +2,10 @@ user_bot_commands = {
     'start': "Запустить бота",
     'help': "Помощь",
     'farm': "Фармить KyZmaCoin",
-    'top': "Топ-10 владельцев KyZmaCoin",
+    'slonyari': "Слоняры KyZmaCoin",
     'slot': "Играть в слоты",
+    'balance': "Показать баланс",
+    'goys': 'Гои KyZmaCoin',
 }
 
 admin_bot_commands = {

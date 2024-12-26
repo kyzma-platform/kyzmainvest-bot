@@ -334,7 +334,7 @@ class Handlers:
         def farm(message):
             self.farm_coin(message)
             
-        @self.bot.message_handler(commands=['top'])
+        @self.bot.message_handler(commands=['slonyari'])
         def top(message):
             self.send_top_users(message)
             
