@@ -19,9 +19,17 @@ class MongoDB:
             all_users.append(user)
         return all_users
     
-    def find_user(self, user_id):
+    def find_user_id(self, user_id):
         """ Find user by id. Returns user dictionary or None """
         user = self.users_collection.find_one({"user_id": user_id})
+        if user:
+            return user
+        else:
+            return None
+        
+    def find_user_nickname(self, nickname):
+        """ Find user by nickname. Returns user dictionary or None """
+        user = self.users_collection.find_one({"nickname": nickname})
         if user:
             return user
         else:
@@ -29,7 +37,7 @@ class MongoDB:
     
     def add_user(self, username, user_id):
         """ Add user to the database. Takes username and id """
-        user = self.find_user(user_id)
+        user = self.find_user_id(user_id)
         if user:
             print(f"User {username} already exists")
             return f"User {username} already exists"
@@ -52,7 +60,7 @@ class MongoDB:
     
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None"""
-        user = self.find_user(user_id)
+        user = self.find_user_id(user_id)
         if user:
             return user['access_level']
         else:
