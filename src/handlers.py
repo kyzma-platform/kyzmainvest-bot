@@ -440,44 +440,44 @@ class Handlers:
             
         # ^ Admin commands ^
             
-        @self.bot.message_handler(commands=['change_chances'])
-        def change_chances_handler(message):
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, "Только админ может изменить шансы.")
-            else:
-                self.change_chances(message)
+        # @self.bot.message_handler(commands=['change_chances'])
+        # def change_chances_handler(message):
+        #     if message.from_user.id != int(self.admin_id):
+        #         self.bot.reply_to(message, "Только админ может изменить шансы.")
+        #     else:
+        #         self.change_chances(message)
             
-        @self.bot.message_handler(commands=['all_users'])
-        def get_all_users(message):
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, "Только админ может получить список всех пользователей.")
-            else:
-                self.all_users()
+        # @self.bot.message_handler(commands=['all_users'])
+        # def get_all_users(message):
+        #     if message.from_user.id != int(self.admin_id):
+        #         self.bot.reply_to(message, "Только админ может получить список всех пользователей.")
+        #     else:
+        #         self.all_users()
             
-        @self.bot.message_handler(commands=['find'])
-        def get_user_handler(message):
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, "Только админ может получить информацию о пользователе.")
-            else:
-                parts = message.text.split()
+        # @self.bot.message_handler(commands=['find'])
+        # def get_user_handler(message):
+        #     if message.from_user.id != int(self.admin_id):
+        #         self.bot.reply_to(message, "Только админ может получить информацию о пользователе.")
+        #     else:
+        #         parts = message.text.split()
 
-                if len(parts) != 2:
-                    self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-                    return
+        #         if len(parts) != 2:
+        #             self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
+        #             return
 
-                nickname = parts[1]
-                self.get_user(message, nickname)
+        #         nickname = parts[1]
+        #         self.get_user(message, nickname)
                 
-        @self.bot.message_handler(commands=['give'])
-        def give_coins_handler(message):
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, "Только админ может дать монеты.")
-            else:
-                self.give_coins(message)
+        # @self.bot.message_handler(commands=['give'])
+        # def give_coins_handler(message):
+        #     if message.from_user.id != int(self.admin_id):
+        #         self.bot.reply_to(message, "Только админ может дать монеты.")
+        #     else:
+        #         self.give_coins(message)
                 
-        @self.bot.message_handler(commands=['remove'])
-        def remove_coins_handler(message):
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, "Только админ может забрать монеты.")
-            else:
-                self.remove_coins(message)
+        # @self.bot.message_handler(commands=['remove'])
+        # def remove_coins_handler(message):
+        #     if message.from_user.id != int(self.admin_id):
+        #         self.bot.reply_to(message, "Только админ может забрать монеты.")
+        #     else:
+        #         self.remove_coins(message)
