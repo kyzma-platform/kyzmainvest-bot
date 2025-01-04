@@ -6,6 +6,7 @@ user_bot_commands = {
     'slot': "Играть в слоты",
     'balance': "Показать баланс",
     'goys': 'Гои KyZmaCoin',
+    'roulette': 'Играть в рулетку',
 }
 
 admin_bot_commands = {
