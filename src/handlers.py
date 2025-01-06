@@ -1,5 +1,6 @@
 from database import MongoDB
-from bot_commands import user_bot_commands, admin_bot_commands
+from bot.bot_commands import user_bot_commands, admin_bot_commands
+from bot.bot_replies import bot_replies
 
 from dotenv import load_dotenv
 from os import getenv
@@ -16,9 +17,10 @@ class Handlers:
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
         self.bot_token = getenv("BOT_TOKEN")
         self.admin_id = getenv("ADMIN_ID")
+        
         self.user_bot_commands = user_bot_commands
         self.admin_bot_commands = admin_bot_commands
-        self.pashalko = "Взаиморозщеты🦗"
+        self.bot_replies = bot_replies
         self.set_commands()
         
         # farm and slot settigs
@@ -42,7 +44,7 @@ class Handlers:
     def create_keyboard(self):
         """ Create custom keyboard for the bot """
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(types.KeyboardButton(self.pashalko))
+        markup.add(types.KeyboardButton(self.bot_replies['pashalko']))
         return markup
         
     def start(self, message):
@@ -51,7 +53,7 @@ class Handlers:
         user_id = message.from_user.id
         self.database.add_user(username, user_id)
             
-        self.bot.reply_to(message, "Поздравляем! Вы подписались на KyZma InVest.", reply_markup=self.create_keyboard())
+        self.bot.reply_to(message, self.bot_replies['welcome'], reply_markup=self.create_keyboard())
         self.log(f"User @{username} started the bot", user_id)
         
         
@@ -81,7 +83,7 @@ class Handlers:
         user = self.database.find_user_id(user_id)
         
         if user is None:
-            self.bot.reply_to(message, "Вас нет в базе данных. Напишите /start")
+            self.bot.reply_to(message, self.bot_replies['error_database'])
         else:
             if current_time - user['last_farm_time'] < 3600:
                 remaining_time = 3600 - (current_time - user['last_farm_time'])
@@ -115,14 +117,14 @@ class Handlers:
             top_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
         
         if not sorted_users:
-            top_users_message = "Пока нет пользователей."
+            top_users_message = self.bot_replies['error_no_users']
         
         # Send the message
         self.bot.reply_to(message, top_users_message)
         self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
         
     def send_bottom_users(self, message):
-        """ Send users with negative balance, excluding the admin """
+        """ Send users with negative balance """
         users = self.database.find_users()
 
         # Exclude the admin user
@@ -135,7 +137,7 @@ class Handlers:
         sorted_users = sorted(negative_balance_users, key=lambda x: x['coins'])
 
         if not sorted_users:
-            self.bot.reply_to(message, "Нет пользователей с отрицательным балансом.")
+            self.bot.reply_to(message, self.bot_replies['error_no_users'])
             return
 
         # Prepare the message with the users with negative balance
@@ -153,7 +155,7 @@ class Handlers:
     def give_all_users_1000_coins(self, message):
         """ Give 1000 coins to all users """
         if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, "Иди нахуй ты не админ.")
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
         else:
             # Retrieve all users from the database
             users = self.database.find_users()
@@ -170,8 +172,7 @@ class Handlers:
                 self.database.update_user(user['user_id'], updated_user)
             
             # Notify the admin that the operation has been completed
-            self.bot.send_message(chat_id, f"<b>Увага! Роздача ПОТУЖНОЇ ТИСЯЧІ для гемблінгу!</b>", parse_mode="HTML")
-            self.log(f"Admin @{message.from_user.username} gave 1000 coins to all users", message.from_user.id)
+            self.bot.send_message(chat_id, self.bot_replies['rozdacha'], parse_mode="HTML")
    
 
     def slot_machine(self, message):
@@ -180,11 +181,11 @@ class Handlers:
         user = self.database.find_user_id(user_id)
 
         if user is None:
-            self.bot.reply_to(message, "Вас нет в базе данных. Напишите /start")
+            self.bot.reply_to(message, self.bot_replies['error_database'])
             return
 
         if user['coins'] <= 0:
-            self.bot.reply_to(message, "Ты боооомж иди зарабатывай монеты.")
+            self.bot.reply_to(message, self.bot_replies['error_no_coins'])
             return
 
         self.bot.send_dice(message.chat.id, emoji="🎰")
@@ -234,11 +235,11 @@ class Handlers:
         user = self.database.find_user_id(user_id)
 
         if user is None:
-            self.bot.reply_to(message, "Вас нет в базе данных. Напишите /start")
+            self.bot.reply_to(message, self.bot_replies['error_database'])
             return
 
         if user['coins'] <= 0:
-            self.bot.reply_to(message, "Ты боооомж иди зарабатывай монеты.")
+            self.bot.reply_to(message, self.bot_replies['error_no_coins'])
             return
 
         # Get the bet and type from the message
@@ -302,95 +303,118 @@ class Handlers:
         
     # ^ Admin commands ^
         
-    # def change_chances(self, message):
-    #     """ Command for the admin to change farm and slot chances """
-    #     if message.from_user.id != int(self.admin_id):
-    #         self.bot.reply_to(message, "Только админ может изменить шансы.")
-    #         return
-    #     else:
-    #         self.bot.reply_to(message, "Стандарные шансы:\nself.farm_rare_chance = 0.1\nself.slot_jackpot_chance = 0.05\nself.slot_win_chance = 0.2")
-    #         parts = message.text.split()
+    def change_chances(self, message):
+        """ Command for the admin to change farm and slot chances """
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            self.bot.reply_to(message, "Стандарные шансы:\nself.farm_rare_chance = 0.1\nself.slot_jackpot_chance = 0.05\nself.slot_win_chance = 0.2")
+            parts = message.text.split()
             
-    #         if len(parts) != 4:
-    #             self.bot.reply_to(message, "Неверный формат. Используйте: /change_chances <farm_rare_chance> <slot_win_chance> <slot_jackpot_chance>")
-    #             return
-    #         try:
-    #             new_farm_rare_chance = float(parts[1])
-    #             new_slot_win_chance = float(parts[2])
-    #             new_slot_jackpot_chance = float(parts[3])
+            if len(parts) != 4:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /change_chances <farm_rare_chance> <slot_win_chance> <slot_jackpot_chance>")
+                return
+            try:
+                new_farm_rare_chance = float(parts[1])
+                new_slot_win_chance = float(parts[2])
+                new_slot_jackpot_chance = float(parts[3])
 
-    #             if not (0 <= new_farm_rare_chance <= 1) or not (0 <= new_slot_win_chance <= 1) or not (0 <= new_slot_jackpot_chance <= 1):
-    #                 self.bot.reply_to(message, "Шансы должны быть числами от 0 до 1.")
-    #                 return
+                if not (0 <= new_farm_rare_chance <= 1) or not (0 <= new_slot_win_chance <= 1) or not (0 <= new_slot_jackpot_chance <= 1):
+                    self.bot.reply_to(message, "Шансы должны быть числами от 0 до 1.")
+                    return
 
-    #             self.farm_rare_chance = new_farm_rare_chance
-    #             self.slot_win_chance = new_slot_win_chance
-    #             self.slot_jackpot_chance = new_slot_jackpot_chance
+                self.farm_rare_chance = new_farm_rare_chance
+                self.slot_win_chance = new_slot_win_chance
+                self.slot_jackpot_chance = new_slot_jackpot_chance
 
-    #             self.bot.reply_to(message, f"Шансы успешно изменены:\n"
-    #                                     f"Фарм редкой монеты: {new_farm_rare_chance * 100}%\n"
-    #                                     f"Шанс на выигрыш в слоте: {new_slot_win_chance * 100}%\n"
-    #                                     f"Шанс на джекпот в слоте: {new_slot_jackpot_chance * 100}%")
-    #             self.log(f"Admin @{message.from_user.username} changed the farm and slot chances.", message.from_user.id)
+                self.bot.reply_to(message, f"Шансы успешно изменены:\n"
+                                        f"Фарм редкой монеты: {new_farm_rare_chance * 100}%\n"
+                                        f"Шанс на выигрыш в слоте: {new_slot_win_chance * 100}%\n"
+                                        f"Шанс на джекпот в слоте: {new_slot_jackpot_chance * 100}%")
+                self.log(f"Admin @{message.from_user.username} changed the farm and slot chances.", message.from_user.id)
         
-    #         except ValueError:
-    #             self.bot.reply_to(message, "Пожалуйста, введите правильные числовые значения для шансов.")
+            except ValueError:
+                self.bot.reply_to(message, "Пожалуйста, введите правильные числовые значения для шансов.")
                 
     def all_users(self):
         """ Get all users"""
-        users = self.database.find_users()
-        message = ""
-        for index, user in enumerate(users, start=1):
-            message += f"{index}. @{user['nickname']} - {user['coins']} coins\n"
-        self.bot.send_message(self.admin_id, message)
-        
-    def get_user(self, message, nickname):
-        """ Get user by nickname"""
-        user = self.database.find_user_nickname(nickname)
-        parts = message.text.split()
-        if len(parts) != 2:
-            self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-            return None
-        if user is None:
-            self.bot.reply_to(message, "Пользователь не найден.")
-            return None
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
         else:
-            message = f"Nickname: @{user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}"
+            users = self.database.find_users()
+            message = ""
+            for index, user in enumerate(users, start=1):
+                message += f"{index}. @{user['nickname']} - {user['coins']} coins\n"
             self.bot.send_message(self.admin_id, message)
             
-    # def give_coins(self, message):
-    #     """ Give coins to the user"""
-    #     parts = message.text.split()
-    #     if len(parts) != 3:
-    #         self.bot.reply_to(message, "Неверный формат. Используйте: /give <nickname> <amount>")
-    #         return
-    #     nickname = parts[1]
-    #     amount = int(parts[2])
-    #     user = self.database.find_user_nickname(nickname)
-    #     if user is None:
-    #         self.bot.reply_to(message, "Пользователь не найден.")
-    #         return
-    #     user['coins'] += amount
-    #     self.database.update_user(user['user_id'], user)
-    #     self.bot.reply_to(message, f"Вы успешно дали {amount} KyZmaCoin пользователю @{nickname}.")
-    #     self.log(f"Admin @{message.from_user.username} gave {amount} coins to @{nickname}", message.from_user.id)
+        def get_user(self, message, nickname):
+            """ Get user by nickname"""
+            if message.from_user.id != int(self.admin_id):
+                self.bot.reply_to(message, self.bot_replies['not_admin'])
+                return
+            else:
+                user = self.database.find_user_nickname(nickname)
+                parts = message.text.split()
+                if len(parts) != 2:
+                    self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
+                    return None
+                if user is None:
+                    self.bot.reply_to(message, "Пользователь не найден.")
+                    return None
+                else:
+                    message = f"Nickname: @{user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}"
+                    self.bot.send_message(self.admin_id, message)
+            
+    def give_coins(self, message):
+        """ Give coins to the user"""
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            parts = message.text.split()
+            if len(parts) != 3:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /give <nickname> <amount>")
+                return
+            nickname = parts[1]
+            amount = int(parts[2])
+            user = self.database.find_user_nickname(nickname)
+            if user is None:
+                self.bot.reply_to(message, "Пользователь не найден.")
+                return
+            user['coins'] += amount
+            self.database.update_user(user['user_id'], user)
+            self.bot.reply_to(message, f"Вы успешно дали {amount} KyZmaCoin пользователю @{nickname}.")
         
-    # def remove_coins(self, message):
-    #     """ Remove coins from the user"""
-    #     parts = message.text.split()
-    #     if len(parts) != 3:
-    #         self.bot.reply_to(message, "Неверный формат. Используйте: /remove <nickname> <amount>")
-    #         return
-    #     nickname = parts[1]
-    #     amount = int(parts[2])
-    #     user = self.database.find_user_nickname(nickname)
-    #     if user is None:
-    #         self.bot.reply_to(message, "Пользователь не найден.")
-    #         return
-    #     user['coins'] -= amount
-    #     self.database.update_user(user['user_id'], user)
-    #     self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
-    #     self.log(f"Admin @{message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
+    def remove_coins(self, message):
+        """ Remove coins from the user"""
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            parts = message.text.split()
+            if len(parts) != 3:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /remove <nickname> <amount>")
+                return
+            nickname = parts[1]
+            amount = int(parts[2])
+            user = self.database.find_user_nickname(nickname)
+            if user is None:
+                self.bot.reply_to(message, "Пользователь не найден.")
+                return
+            user['coins'] -= amount
+            self.database.update_user(user['user_id'], user)
+            self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
+            self.log(f"Admin @{message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
+        
+    # def ban(self, message):
+    #     """ Ban the user"""
+    #     self.bot.reply_to(message, "Сосі яйка даун")
+    #     self.bot.reply_to(message, f"{message.chat.id}, {message.from_user.id}")
+    #     self.bot.ban_chat_member(message.chat.id, message.from_user.id)
+    #     self.log(f"User @{message.from_user.username} was banned.", message.from_user.id)
+            
         
     def setup_handlers(self):
         """ Setup bot handlers"""
@@ -434,50 +458,42 @@ class Handlers:
         def send_goys(message):
             self.send_bottom_users(message)
             
-        @self.bot.message_handler(func=lambda message: message.text == self.pashalko)
-        def handle_text(message):
-            self.vzaimorozchety(message)
+        # @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
+        # def handle_text(message):
+        #     self.vzaimorozchety(message)
+            
+        # @self.bot.message_handler(lambda message: message.text == "хочу бан")
+        # def ban_user(message):
+        #     self.ban(message)
+
             
         # ^ Admin commands ^
-            
-        # @self.bot.message_handler(commands=['change_chances'])
-        # def change_chances_handler(message):
-        #     if message.from_user.id != int(self.admin_id):
-        #         self.bot.reply_to(message, "Только админ может изменить шансы.")
-        #     else:
-        #         self.change_chances(message)
-            
-        # @self.bot.message_handler(commands=['all_users'])
-        # def get_all_users(message):
-        #     if message.from_user.id != int(self.admin_id):
-        #         self.bot.reply_to(message, "Только админ может получить список всех пользователей.")
-        #     else:
-        #         self.all_users()
-            
-        # @self.bot.message_handler(commands=['find'])
-        # def get_user_handler(message):
-        #     if message.from_user.id != int(self.admin_id):
-        #         self.bot.reply_to(message, "Только админ может получить информацию о пользователе.")
-        #     else:
-        #         parts = message.text.split()
 
-        #         if len(parts) != 2:
-        #             self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-        #             return
+        
+            
+        @self.bot.message_handler(commands=['change_chances'])
+        def change_chances_handler(message):
+            self.change_chances(message)
+            
+        @self.bot.message_handler(commands=['all_users'])
+        def get_all_users(message):
+            self.all_users()
+            
+        @self.bot.message_handler(commands=['find'])
+        def get_user_handler(message):
+            parts = message.text.split()
 
-        #         nickname = parts[1]
-        #         self.get_user(message, nickname)
+            if len(parts) != 2:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
+                return
+
+            nickname = parts[1]
+            self.get_user(message, nickname)
                 
-        # @self.bot.message_handler(commands=['give'])
-        # def give_coins_handler(message):
-        #     if message.from_user.id != int(self.admin_id):
-        #         self.bot.reply_to(message, "Только админ может дать монеты.")
-        #     else:
-        #         self.give_coins(message)
+        @self.bot.message_handler(commands=['give'])
+        def give_coins_handler(message):
+            self.give_coins(message)
                 
-        # @self.bot.message_handler(commands=['remove'])
-        # def remove_coins_handler(message):
-        #     if message.from_user.id != int(self.admin_id):
-        #         self.bot.reply_to(message, "Только админ может забрать монеты.")
-        #     else:
-        #         self.remove_coins(message)
+        @self.bot.message_handler(commands=['remove'])
+        def remove_coins_handler(message):
+            self.remove_coins(message)
