@@ -44,7 +44,7 @@ class Handlers:
     def create_keyboard(self):
         """ Create custom keyboard for the bot """
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(types.KeyboardButton(self.bot_replies['pashalko']), types.KeyboardButton('Написать гоям'))
+        markup.add(types.KeyboardButton(self.bot_replies['pashalko']))
         return markup
         
     def start(self, message):
