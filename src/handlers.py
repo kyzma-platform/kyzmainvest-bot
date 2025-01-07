@@ -44,7 +44,7 @@ class Handlers:
     def create_keyboard(self):
         """ Create custom keyboard for the bot """
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(types.KeyboardButton(self.bot_replies['pashalko']))
+        markup.add(types.KeyboardButton(self.bot_replies['pashalko']), types.KeyboardButton('Написать гоям'))
         return markup
         
     def start(self, message):
@@ -229,6 +229,14 @@ class Handlers:
         """ Взаиморозщеты🦗 """
         self.bot.reply_to(message, "Взаиморозщеты🦗")
         
+    def message_goys(self, message):
+        donbasik = self.database.find_user_nickname('Mollifh')
+        if donbasik:
+            self.bot.reply_to(message, "Сообщение гою отправлено")
+            self.bot.send_message(donbasik['user_id'], self.bot_replies['error_no_coins'])
+        else:
+            self.bot.reply_to(message, "Гой не найден")
+            
     def roulette_game(self, message):
         """ Simple Roulette Game with Red/Black and numbers """
         user_id = message.from_user.id
@@ -461,6 +469,10 @@ class Handlers:
         @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
         def handle_text(message):
             self.vzaimorozchety(message)
+            
+        @self.bot.message_handler(func=lambda message: message.text == "Написать гоям")
+        def handle_text(message):
+            self.message_goys(message)
             
         # @self.bot.message_handler(lambda message: message.text == "хочу бан")
         # def ban_user(message):
