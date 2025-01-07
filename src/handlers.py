@@ -458,9 +458,9 @@ class Handlers:
         def send_goys(message):
             self.send_bottom_users(message)
             
-        # @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
-        # def handle_text(message):
-        #     self.vzaimorozchety(message)
+        @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
+        def handle_text(message):
+            self.vzaimorozchety(message)
             
         # @self.bot.message_handler(lambda message: message.text == "хочу бан")
         # def ban_user(message):
