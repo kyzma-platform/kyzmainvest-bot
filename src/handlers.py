@@ -349,23 +349,23 @@ class Handlers:
                 message += f"{index}. @{user['nickname']} - {user['coins']} coins\n"
             self.bot.send_message(self.admin_id, message)
             
-        def get_user(self, message, nickname):
-            """ Get user by nickname"""
-            if message.from_user.id != int(self.admin_id):
-                self.bot.reply_to(message, self.bot_replies['not_admin'])
-                return
+    def get_user(self, message, nickname):
+        """ Get user by nickname"""
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            user = self.database.find_user_nickname(nickname)
+            parts = message.text.split()
+            if len(parts) != 2:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
+                return None
+            if user is None:
+                self.bot.reply_to(message, "Пользователь не найден.")
+                return None
             else:
-                user = self.database.find_user_nickname(nickname)
-                parts = message.text.split()
-                if len(parts) != 2:
-                    self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-                    return None
-                if user is None:
-                    self.bot.reply_to(message, "Пользователь не найден.")
-                    return None
-                else:
-                    message = f"Nickname: @{user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}"
-                    self.bot.send_message(self.admin_id, message)
+                message = f"Nickname: @{user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}"
+                self.bot.send_message(self.admin_id, message)
             
     def give_coins(self, message):
         """ Give coins to the user"""
