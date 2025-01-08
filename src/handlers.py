@@ -247,7 +247,8 @@ class Handlers:
             return
 
         if user['coins'] <= 0:
-            self.bot.reply_to(message, self.bot_replies['error_no_coins'])
+            # self.bot.reply_to(message, self.bot_replies['error_no_coins'])
+            self.bot.send_animation(message.chat.id, 'https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExZXo5YWtjM3JxOXFhdnZ6eXgyN2s3NnR1ZzEzNXhiczQ2MWw0ODQ1ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ytdPUwmGshqsJqZhET/giphy-downsized-large.gif')
             return
 
         # Get the bet and type from the message
