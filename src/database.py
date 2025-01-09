@@ -47,7 +47,9 @@ class MongoDB:
                 'nickname': username,
                 'coins': 0,
                 'last_farm_time': 0,
-                'access_level': 'user'
+                'access_level': 'user',
+                'debt': 0,
+                'debt_limit_reached': False,
             }
             self.users_collection.insert_one(new_user)
             print(f"User {username} added")
@@ -57,7 +59,7 @@ class MongoDB:
         """ Update user data. Takes id and dictionary with fields to update """
         self.users_collection.update_one({"user_id": user_id}, {"$set": update})
         return f"User {user_id} updated {update}"
-    
+
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None"""
         user = self.find_user_id(user_id)

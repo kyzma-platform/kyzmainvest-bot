@@ -7,6 +7,9 @@ user_bot_commands = {
     'balance': "Показать баланс",
     'goys': 'Гои KyZmaCoin',
     'roulette': 'Играть в рулетку',
+    'borrow': 'Взять в долг',
+    'repay': 'Выплатить долг',
+    'debt': 'Посмотреть долг',
 }
 
 admin_bot_commands = {

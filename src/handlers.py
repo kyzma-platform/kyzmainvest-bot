@@ -89,27 +89,49 @@ class Handlers:
         self.bot.reply_to(message, top_users_message)
         self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
         
-    def send_bottom_users(self, message):
-        """ Send users with negative balance """
+    # def send_bottom_users(self, message):
+    #     """ Send users with negative balance """
+    #     users = self.database.find_users()
+
+    #     users = [user for user in users if user['user_id'] != int(self.admin_id)]
+        
+    #     negative_balance_users = [user for user in users if user['coins'] < 0]
+        
+    #     sorted_users = sorted(negative_balance_users, key=lambda x: x['coins'])
+
+    #     if not sorted_users:
+    #         self.bot.reply_to(message, self.bot_replies['error_no_users'])
+    #         return
+
+    #     bottom_users_message = "Топ гоев в KyZma InVest:\n"
+
+    #     for i, user in enumerate(sorted_users[:10], start=1):
+    #         bottom_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
+
+    #     self.bot.reply_to(message, bottom_users_message)
+    #     self.log(f"User @{message.from_user.username} used /goys", message.from_user.id)
+        
+    def send_debtors(self, message):
+        """ Send a list of users with debt in descending order """
         users = self.database.find_users()
-
-        users = [user for user in users if user['user_id'] != int(self.admin_id)]
         
-        negative_balance_users = [user for user in users if user['coins'] < 0]
+        # Filter users with debt > 0 and exclude the admin
+        debtors = [user for user in users if user['debt'] > 0 and user['user_id'] != int(self.admin_id)]
         
-        sorted_users = sorted(negative_balance_users, key=lambda x: x['coins'])
+        # Sort debtors by debt in descending order
+        sorted_debtors = sorted(debtors, key=lambda x: x['debt'], reverse=True)
+        
+        debtors_message = "Список должников в KyZma InVest:\n"
+        
+        for i, debtor in enumerate(sorted_debtors, start=1):
+            debtors_message += f"{i}. {debtor['nickname']} - {debtor['debt']} KyZmaCoin\n"
+        
+        if not sorted_debtors:
+            debtors_message = "Никто не имеет задолженностей."
+        
+        self.bot.reply_to(message, debtors_message)
+        self.log(f"User @{message.from_user.username} used /debtors", message.from_user.id)
 
-        if not sorted_users:
-            self.bot.reply_to(message, self.bot_replies['error_no_users'])
-            return
-
-        bottom_users_message = "Топ гоев в KyZma InVest:\n"
-
-        for i, user in enumerate(sorted_users[:10], start=1):
-            bottom_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
-
-        self.bot.reply_to(message, bottom_users_message)
-        self.log(f"User @{message.from_user.username} used /goys", message.from_user.id)
 
     def give_all_users_1000_coins(self, message):
         """ Give 1000 coins to all users """
@@ -137,10 +159,82 @@ class Handlers:
     def vzaimorozchety(self, message):
         """ Взаиморозщеты🦗 """
         self.bot.reply_to(message, "Взаиморозщеты🦗")
+        
+    # * Debt System *
+    def borrow_money(self, message):
+        user_id = message.from_user.id
+        user = self.database.find_user_id(user_id)
+        
+        if user['debt_limit_reached']:
+            self.bot.reply_to(message, "Вы исчерпали лимит долга в 1.000.000 KyZmaCoin. Пожалуйста, погасите долг, чтобы взять ещё.")
+            return
+
+        parts = message.text.split()
+        if len(parts) != 2 or not parts[1].isdigit():
+            self.bot.reply_to(message, "Неверный формат. Используйте: /borrow <amount>")
+            return
+
+        amount = int(parts[1])
+
+        if amount <= 0 or amount > 1_000_000 - user['debt']:
+            self.bot.reply_to(message, "Вы не можете взять такую сумму. Лимит долга: 1.000.000 KyZmaCoin.")
+            return
+
+        user['coins'] += amount
+        user['debt'] += amount
+
+        if user['debt'] >= 1_000_000:
+            user['debt_limit_reached'] = True
+
+        self.database.update_user(user_id, user)
+        self.bot.reply_to(message, f"Вы взяли {amount} KyZmaCoin в долг. Ваш текущий долг: {user['debt']} KyZmaCoin.")
+        
+    def repay_debt(self, message):
+        user_id = message.from_user.id
+        user = self.database.find_user_id(user_id)
+
+        if user['debt'] == 0:
+            self.bot.reply_to(message, "У вас нет долгов.")
+            return
+
+        parts = message.text.split()
+        if len(parts) != 2 or not parts[1].isdigit():
+            self.bot.reply_to(message, "Неверный формат. Используйте: /repay <amount>")
+            return
+
+        amount = int(parts[1])
+
+        if amount <= 0:
+            self.bot.reply_to(message, "Сумма должна быть больше нуля.")
+            return
+
+        if amount > user['coins']:
+            self.bot.reply_to(message, "У вас недостаточно средств для погашения этой суммы.")
+            return
+
+        if amount > user['debt']:
+            amount = user['debt']
+
+        user['coins'] -= amount
+        user['debt'] -= amount
+
+        if user['debt'] < 1_000_000:
+            user['debt_limit_reached'] = False
+
+        self.database.update_user(user_id, user)
+        self.bot.reply_to(message, f"Вы погасили {amount} KyZmaCoin. Ваш текущий долг: {user['debt']} KyZmaCoin.")
+        
+    def check_debt(self, message):
+        user_id = message.from_user.id
+        user = self.database.find_user_id(user_id)
+        self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
+
+
+
     
     # ^ Admin commands ^
         
-    def all_users(self):
+    def all_users(self, message):
         """ Get all users"""
         if message.from_user.id != int(self.admin_id):
             self.bot.reply_to(message, self.bot_replies['not_admin'])
@@ -274,7 +368,7 @@ class Handlers:
             
         @self.bot.message_handler(commands=['goys'])
         def send_goys(message):
-            self.send_bottom_users(message)
+            self.send_debtors(message)
             
         @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
         def handle_text(message):
@@ -284,7 +378,7 @@ class Handlers:
         
         @self.bot.message_handler(commands=['all_users'])
         def get_all_users(message):
-            self.all_users()
+            self.all_users(message)
             
         @self.bot.message_handler(commands=['find'])
         def get_user_handler(message):
@@ -304,3 +398,16 @@ class Handlers:
         @self.bot.message_handler(commands=['remove'])
         def remove_coins_handler(message):
             self.remove_coins(message)
+            
+        @self.bot.message_handler(commands=['borrow'])
+        def borrow_handler(message):
+            self.borrow_money(message)
+
+        @self.bot.message_handler(commands=['repay'])
+        def repay_handler(message):
+            self.repay_debt(message)
+
+        @self.bot.message_handler(commands=['debt'])
+        def debt_handler(message):
+            self.check_debt(message)
+
