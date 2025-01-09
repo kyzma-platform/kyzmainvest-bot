@@ -29,7 +29,10 @@ class Handlers:
         self.set_commands()
         
     def log(self, message, user_id):
-        """ Log messages to the admin in bot chat """
+        """ Log messages to the admin in bot chat 
+
+            log(message, user_id)
+        """
         user_access_level = self.database.get_access_level(user_id)
         if user_access_level == "user":
             self.bot.send_message(self.admin_id, message)
@@ -130,7 +133,7 @@ class Handlers:
             debtors_message = "Никто не имеет задолженностей."
         
         self.bot.reply_to(message, debtors_message)
-        self.log(f"User @{message.from_user.username} used /debtors", message.from_user.id)
+        self.log(f"User @{message.from_user.username} used /goys", message.from_user.id)
 
 
     def give_all_users_1000_coins(self, message):
@@ -188,6 +191,7 @@ class Handlers:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы взяли {amount} KyZmaCoin в долг. Ваш текущий долг: {user['debt']} KyZmaCoin.")
+        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins")
         
     def repay_debt(self, message):
         user_id = message.from_user.id
@@ -223,15 +227,14 @@ class Handlers:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы погасили {amount} KyZmaCoin. Ваш текущий долг: {user['debt']} KyZmaCoin.")
+        self.log(f"User @{message.from_user.username} repayed debt {amount} coins.")
         
     def check_debt(self, message):
         user_id = message.from_user.id
         user = self.database.find_user_id(user_id)
         self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
+        self.log(f"User @{message.from_user.username} checked their debt")
 
-
-
-    
     # ^ Admin commands ^
         
     def all_users(self, message):
