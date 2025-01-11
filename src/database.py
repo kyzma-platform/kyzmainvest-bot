@@ -35,7 +35,7 @@ class MongoDB:
         else:
             return None
     
-    def add_user(self, username, user_id):
+    def add_user(self, username, user_id, name):
         """ Add user to the database. Takes username and id """
         user = self.find_user_id(user_id)
         if user:
@@ -50,6 +50,7 @@ class MongoDB:
                 'access_level': 'user',
                 'debt': 0,
                 'debt_limit_reached': False,
+                'name': name,
             }
             self.users_collection.insert_one(new_user)
             print(f"User {username} added")
@@ -59,6 +60,12 @@ class MongoDB:
         """ Update user data. Takes id and dictionary with fields to update """
         self.users_collection.update_one({"user_id": user_id}, {"$set": update})
         return f"User {user_id} updated {update}"
+    
+    # def add_new_field(self):
+    #     self.users_collection.update_many(
+    #         {},  # Empty filter, meaning all documents
+    #         {"$set": {"name": None}}  # Add 'name' field with None or default value
+    # )
 
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None"""

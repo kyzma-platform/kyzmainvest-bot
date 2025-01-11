@@ -7,6 +7,7 @@ name = "pypi"
 pymongo = "*"
 python-dotenv = "*"
 pytelegrambotapi = "*"
+schedule = "*"
 
 [dev-packages]
 

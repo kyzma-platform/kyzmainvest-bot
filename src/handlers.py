@@ -10,6 +10,8 @@ from os import getenv
 import telebot
 from telebot import types
 import time
+import schedule
+import threading
 
 class Handlers:
     """ Class for handling bot commands"""
@@ -22,6 +24,7 @@ class Handlers:
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
         self.bot_token = getenv("BOT_TOKEN")
         self.admin_id = getenv("ADMIN_ID")
+        self.amnesty_requests = {}
         
         self.user_bot_commands = user_bot_commands
         self.admin_bot_commands = admin_bot_commands
@@ -53,7 +56,7 @@ class Handlers:
         """ Start the bot"""
         username = message.from_user.username
         user_id = message.from_user.id
-        self.database.add_user(username, user_id)
+        self.database.add_user(username, user_id, name=None)
             
         self.bot.reply_to(message, self.bot_replies['welcome'], reply_markup=self.create_keyboard())
         self.log(f"User @{username} started the bot", user_id)
@@ -91,28 +94,6 @@ class Handlers:
         
         self.bot.reply_to(message, top_users_message)
         self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
-        
-    # def send_bottom_users(self, message):
-    #     """ Send users with negative balance """
-    #     users = self.database.find_users()
-
-    #     users = [user for user in users if user['user_id'] != int(self.admin_id)]
-        
-    #     negative_balance_users = [user for user in users if user['coins'] < 0]
-        
-    #     sorted_users = sorted(negative_balance_users, key=lambda x: x['coins'])
-
-    #     if not sorted_users:
-    #         self.bot.reply_to(message, self.bot_replies['error_no_users'])
-    #         return
-
-    #     bottom_users_message = "Топ гоев в KyZma InVest:\n"
-
-    #     for i, user in enumerate(sorted_users[:10], start=1):
-    #         bottom_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
-
-    #     self.bot.reply_to(message, bottom_users_message)
-    #     self.log(f"User @{message.from_user.username} used /goys", message.from_user.id)
         
     def send_debtors(self, message):
         """ Send a list of users with debt in descending order """
@@ -234,6 +215,68 @@ class Handlers:
         user = self.database.find_user_id(user_id)
         self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
         self.log(f"User @{message.from_user.username} checked their debt")
+        
+    def remind_debtors(self):
+        """ Send a reminder to all users who have a debt """
+        users = self.database.find_users()
+        debtors = [user for user in users if user['debt'] > 0 and user['user_id'] != int(self.admin_id)]
+        
+        for debtor in debtors:
+            message = f"Шановний/шановна {debtor['name']},\n\nПовідомляємо, що Ваш борг перед KyZma InVest становить {debtor['debt']} KyZmaCoin. Ми настійно просимо Вас погасити зазначену суму у найкоротші терміни. У разі неповернення боргу, ми будемо змушені вжити відповідних заходів.\n\nДля оплати боргу скористайтеся командою /repay.\n\nЗ повагою,\n\nАдміністрація KyZma InVest"
+            self.bot.send_message(debtor['user_id'], message)
+            self.log(f"Sent debt reminder to @{debtor['nickname']}", debtor['user_id'])
+            
+    def setup_daily_reminder(self):
+        """ Setup the daily reminder to send debt reminders """
+        schedule.every().day.at("22:00").do(self.remind_debtors)
+
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+            
+    # New amnesty functionality
+    def request_amnesty(self, message):
+        """ Start the amnesty request process """
+        user_id = message.from_user.id
+        if user_id in self.amnesty_requests:
+            self.bot.reply_to(message, "Вы уже отправили запрос на амнистию.")
+            return
+        
+        self.bot.reply_to(message, "Что касается вашей амнистии? Опишите, пожалуйста, ситуацию.")
+        self.amnesty_requests[user_id] = {'step': 1}
+
+    def collect_amnesty_reason(self, message):
+        """ Collect the reason for amnesty """
+        user_id = message.from_user.id
+        reason = message.text
+        if user_id not in self.amnesty_requests or self.amnesty_requests[user_id]['step'] != 1:
+            return
+        
+        # Store the reason and ask for the message
+        self.amnesty_requests[user_id]['reason'] = reason
+        self.bot.reply_to(message, "Теперь напишите сообщение для администратора, которое вы хотите отправить.")
+        self.amnesty_requests[user_id]['step'] = 2
+
+    def collect_amnesty_message(self, message):
+        """ Collect the message for amnesty """
+        user_id = message.from_user.id
+        amnesty_data = self.amnesty_requests.get(user_id)
+        
+        if not amnesty_data or amnesty_data['step'] != 2:
+            return
+        
+        # Store the message
+        amnesty_message = message.text
+        amnesty_data['message'] = amnesty_message
+        
+        # Send the amnesty request to the admin
+        self.bot.send_message(self.admin_id, f"Запрос на амнистию от @{message.from_user.username}:\n\n"
+                                             f"Причина: {amnesty_data['reason']}\n"
+                                             f"Сообщение: {amnesty_data['message']}")
+        
+        # Inform the user and reset the process
+        self.bot.reply_to(message, "Ваш запрос на амнистию отправлен админу. Ожидайте ответа.")
+        self.amnesty_requests.pop(user_id)
 
     # ^ Admin commands ^
         
@@ -323,7 +366,6 @@ class Handlers:
             user_id = message.from_user.id
             user = self.database.find_user_id(user_id)
             current_time = time.time()
-            print(current_time)
             
             game_result = self.farm.farm_coin(message, user, current_time)
             if game_result is not None:
@@ -344,6 +386,7 @@ class Handlers:
             game_result = self.slots.slot_machine(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
+                self.log(f"User @{message.from_user.username} played slots.")
             else:
                 print("Game result is None, skipping database update.")
             
@@ -354,6 +397,7 @@ class Handlers:
             game_result = self.roulette.roulette_game(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
+                self.log(f"User @{message.from_user.username} played roulette.")
             else:
                 print("Game result is None, skipping database update.")
             
@@ -413,4 +457,21 @@ class Handlers:
         @self.bot.message_handler(commands=['debt'])
         def debt_handler(message):
             self.check_debt(message)
+            
+        @self.bot.message_handler(commands=['amnisty'])
+        def amnisty(message):
+            """ Handle the /amnisty command """
+            self.request_amnesty(message)
+        
+        @self.bot.message_handler(func=lambda message: message.from_user.id in self.amnesty_requests and self.amnesty_requests[message.from_user.id]['step'] == 1)
+        def handle_amnesty_reason(message):
+            """ Handle the reason part of the amnesty """
+            self.collect_amnesty_reason(message)
+        
+        @self.bot.message_handler(func=lambda message: message.from_user.id in self.amnesty_requests and self.amnesty_requests[message.from_user.id]['step'] == 2)
+        def handle_amnesty_message(message):
+            """ Handle the message part of the amnesty """
+            self.collect_amnesty_message(message)
+            
+        threading.Thread(target=self.setup_daily_reminder, daemon=True).start()
 
