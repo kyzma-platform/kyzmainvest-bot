@@ -155,7 +155,7 @@ class Handlers:
 
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            self.bot.reply_to(message, "Неверный формат. Используйте: /borrow <amount>")
+            self.bot.reply_to(message, "Неверный формат. Используйте: <i>/borrow количество</i>", parse_mode="HTML")
             return
 
         amount = int(parts[1])
@@ -184,7 +184,7 @@ class Handlers:
 
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            self.bot.reply_to(message, "Неверный формат. Используйте: /repay <amount>")
+            self.bot.reply_to(message, "Неверный формат. Используйте: <i>/repay количество</i>")
             return
 
         amount = int(parts[1])
@@ -286,7 +286,7 @@ class Handlers:
         
         parts = message.text.split()
         if len(parts) != 3:
-            self.bot.reply_to(message, "Неверный формат. Используйте: /transfer <nickname> <amount>")
+            self.bot.reply_to(message, f"Неверный формат. Используйте: <i>/transfer ник монеты</i>", parse_mode="HTML")
             return
         
         recipient_nickname = parts[1]
