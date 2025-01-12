@@ -431,7 +431,7 @@ class Handlers:
             else:
                 print("Game result is None, skipping database update.")
             
-        @self.bot.message_handler(commands=['рулетка'])
+        @self.bot.message_handler(commands=['rou'])
         def roulette(message):
             user_id = message.from_user.id
             user = self.database.find_user_id(user_id)
