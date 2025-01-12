@@ -277,6 +277,47 @@ class Handlers:
         # Inform the user and reset the process
         self.bot.reply_to(message, "Ваш запрос на амнистию отправлен админу. Ожидайте ответа.")
         self.amnesty_requests.pop(user_id)
+        
+        
+    def transfer_coins(self, message):
+        """ Transfer coins between users """
+        sender_id = message.from_user.id
+        sender = self.database.find_user_id(sender_id)
+        
+        parts = message.text.split()
+        if len(parts) != 3:
+            self.bot.reply_to(message, "Неверный формат. Используйте: /transfer <nickname> <amount>")
+            return
+        
+        recipient_nickname = parts[1]
+        amount = int(parts[2])
+
+        if amount <= 0:
+            self.bot.reply_to(message, "Сумма перевода должна быть больше нуля.")
+            return
+        
+        if sender['coins'] < amount:
+            self.bot.reply_to(message, "У вас недостаточно средств для перевода.")
+            return
+
+        recipient = self.database.find_user_nickname(recipient_nickname)
+        if recipient is None:
+            self.bot.reply_to(message, "Пользователь не найден.")
+            return
+
+        # Deduct coins from the sender and add to the recipient
+        sender['coins'] -= amount
+        recipient['coins'] += amount
+
+        self.database.update_user(sender_id, sender)
+        self.database.update_user(recipient['user_id'], recipient)
+        
+        # Send confirmation messages to both users
+        self.bot.reply_to(message, f"Вы успешно перевели {amount} KyZmaCoin пользователю @{recipient['nickname']}.")
+        self.bot.send_message(recipient['user_id'], f"Вам перевели {amount} KyZmaCoin от @{sender['nickname']}.")
+        
+        # Log the transaction
+        self.log(f"User @{sender['nickname']} transferred {amount} coins to @{recipient['nickname']}", sender_id)
 
     # ^ Admin commands ^
         
@@ -350,7 +391,7 @@ class Handlers:
             self.database.update_user(user['user_id'], user)
             self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
             self.log(f"Admin @{message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
-        
+            
     def setup_handlers(self):
         """ Setup bot handlers"""
         @self.bot.message_handler(commands=['start'])
@@ -390,7 +431,7 @@ class Handlers:
             else:
                 print("Game result is None, skipping database update.")
             
-        @self.bot.message_handler(commands=['roulette'])
+        @self.bot.message_handler(commands=['рулетка'])
         def roulette(message):
             user_id = message.from_user.id
             user = self.database.find_user_id(user_id)
@@ -472,6 +513,10 @@ class Handlers:
         def handle_amnesty_message(message):
             """ Handle the message part of the amnesty """
             self.collect_amnesty_message(message)
+            
+        @self.bot.message_handler(commands=['transfer'])
+        def transfer(message):
+            self.transfer_coins(message)
             
         threading.Thread(target=self.setup_daily_reminder, daemon=True).start()
 

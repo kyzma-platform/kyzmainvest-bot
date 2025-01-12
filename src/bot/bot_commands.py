@@ -10,6 +10,7 @@ user_bot_commands = {
     'borrow': 'Взять в долг',
     'repay': 'Выплатить долг',
     'debt': 'Посмотреть долг',
+    'transfer': 'Перевести KyZmaCoin',
 }
 
 admin_bot_commands = {
