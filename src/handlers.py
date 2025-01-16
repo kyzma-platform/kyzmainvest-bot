@@ -59,7 +59,7 @@ class Handlers:
         self.database.add_user(username, user_id, name=None)
             
         self.bot.reply_to(message, self.bot_replies['welcome'], reply_markup=self.create_keyboard())
-        self.log(f"User @{username} started the bot", user_id)
+        self.log(f"User {username} started the bot", user_id)
         
         
     def send_help(self, message):
@@ -74,7 +74,7 @@ class Handlers:
                 help_text += "/" + key + ": "
                 help_text += self.user_bot_commands[key] + "\n"
         self.bot.reply_to(message, help_text)
-        self.log(f"User @{message.from_user.username} used /help", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /help", message.from_user.id)
                 
     def send_top_users(self, message):
         """ Send top 10 users by coins, excluding the admin """
@@ -93,7 +93,7 @@ class Handlers:
             top_users_message = self.bot_replies['error_no_users']
         
         self.bot.reply_to(message, top_users_message)
-        self.log(f"User @{message.from_user.username} used /top", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /top", message.from_user.id)
         
     def send_debtors(self, message):
         """ Send a list of users with debt in descending order """
@@ -114,7 +114,7 @@ class Handlers:
             debtors_message = "Никто не имеет задолженностей."
         
         self.bot.reply_to(message, debtors_message)
-        self.log(f"User @{message.from_user.username} used /goys", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)
 
 
     def give_all_users_1000_coins(self, message):
@@ -138,7 +138,7 @@ class Handlers:
         """ Check the user's balance """
         user = self.database.find_user_id(user_id)
         self.bot.reply_to(message, f"У вас {user['coins']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} checked their balance", user_id)
+        self.log(f"User {message.from_user.username} checked their balance", user_id)
 
     def vzaimorozchety(self, message):
         """ Взаиморозщеты🦗 """
@@ -208,13 +208,13 @@ class Handlers:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы погасили {amount} KyZmaCoin. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} repayed debt {amount} coins.")
+        self.log(f"User {message.from_user.username} repayed debt {amount} coins.", user_id)
         
     def check_debt(self, message):
         user_id = message.from_user.id
         user = self.database.find_user_id(user_id)
         self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} checked their debt")
+        self.log(f"User {message.from_user.username} checked their debt")
         
     def remind_debtors(self):
         """ Send a reminder to all users who have a debt """
@@ -224,7 +224,7 @@ class Handlers:
         for debtor in debtors:
             message = f"Шановний/шановна {debtor['name']},\n\nПовідомляємо, що Ваш борг перед KyZma InVest становить {debtor['debt']} KyZmaCoin. Ми настійно просимо Вас погасити зазначену суму у найкоротші терміни. У разі неповернення боргу, ми будемо змушені вжити відповідних заходів.\n\nДля оплати боргу скористайтеся командою /repay.\n\nЗ повагою,\n\nАдміністрація KyZma InVest"
             self.bot.send_message(debtor['user_id'], message)
-            self.log(f"Sent debt reminder to @{debtor['nickname']}", debtor['user_id'])
+            self.log(f"Sent debt reminder to {debtor['nickname']}", debtor['user_id'])
             
     def setup_daily_reminder(self):
         """ Setup the daily reminder to send debt reminders """
@@ -270,7 +270,7 @@ class Handlers:
         amnesty_data['message'] = amnesty_message
         
         # Send the amnesty request to the admin
-        self.bot.send_message(self.admin_id, f"Запрос на амнистию от @{message.from_user.username}:\n\n"
+        self.bot.send_message(self.admin_id, f"Запрос на амнистию от {message.from_user.username}:\n\n"
                                              f"Причина: {amnesty_data['reason']}\n"
                                              f"Сообщение: {amnesty_data['message']}")
         
@@ -313,11 +313,11 @@ class Handlers:
         self.database.update_user(recipient['user_id'], recipient)
         
         # Send confirmation messages to both users
-        self.bot.reply_to(message, f"Вы успешно перевели {amount} KyZmaCoin пользователю @{recipient['nickname']}.")
-        self.bot.send_message(recipient['user_id'], f"Вам перевели {amount} KyZmaCoin от @{sender['nickname']}.")
+        self.bot.reply_to(message, f"Вы успешно перевели {amount} KyZmaCoin пользователю {recipient['nickname']}.")
+        self.bot.send_message(recipient['user_id'], f"Вам перевели {amount} KyZmaCoin от {sender['nickname']}.")
         
         # Log the transaction
-        self.log(f"User @{sender['nickname']} transferred {amount} coins to @{recipient['nickname']}", sender_id)
+        self.log(f"User {sender['nickname']} transferred {amount} coins to @{recipient['nickname']}", sender_id)
 
     # ^ Admin commands ^
         
@@ -330,7 +330,7 @@ class Handlers:
             users = self.database.find_users()
             message = ""
             for index, user in enumerate(users, start=1):
-                message += f"{index}. @{user['nickname']} - {user['coins']} coins\n"
+                message += f"{index}. {user['nickname']} - {user['coins']} coins\n"
             self.bot.send_message(self.admin_id, message)
             
     def get_user(self, message, nickname):
@@ -348,7 +348,7 @@ class Handlers:
                 self.bot.reply_to(message, "Пользователь не найден.")
                 return None
             else:
-                message = f"Nickname: @{user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}"
+                message = f"Nickname: {user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}\n\nDebt: {user['debt']}"
                 self.bot.send_message(self.admin_id, message)
             
     def give_coins(self, message):
@@ -390,7 +390,7 @@ class Handlers:
             user['coins'] -= amount
             self.database.update_user(user['user_id'], user)
             self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
-            self.log(f"Admin @{message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
+            self.log(f"Admin {message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
             
     def setup_handlers(self):
         """ Setup bot handlers"""
@@ -411,7 +411,7 @@ class Handlers:
             game_result = self.farm.farm_coin(message, user, current_time)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User @{message.from_user.username} farmed {game_result} coins.")
+                self.log(f"User {message.from_user.username} farmed {game_result} coins.\n\nTotal: {user['coins']}", user_id)
             else:
                 print("Game result is None, skipping database update.")
             
@@ -427,7 +427,7 @@ class Handlers:
             game_result = self.slots.slot_machine(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User @{message.from_user.username} played slots.")
+                self.log(f"User {message.from_user.username} played slots.", user_id)
             else:
                 print("Game result is None, skipping database update.")
             
@@ -438,7 +438,7 @@ class Handlers:
             game_result = self.roulette.roulette_game(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User @{message.from_user.username} played roulette.")
+                self.log(f"User {message.from_user.username} played roulette.", user_id)
             else:
                 print("Game result is None, skipping database update.")
             
