@@ -422,25 +422,26 @@ class Handlers:
                 self.bot.reply_to(message, "ID пользователя должен быть числом.")
                 
     def ban_user(self, message):
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
+
             parts = message.text.split(maxsplit=1)
             print(parts)
             if parts[0] == "бан" or parts[0] == "Бан":
-                if len(parts) < 2:
-                    self.bot.reply_to(message, "Idi nahui ne tot format")
-                nickname = parts[1]
-                
-                user = self.database.find_user_nickname(nickname)
-                if user is None:
-                    self.bot.reply_to(message, "Пользователь не найден")
+                if message.from_user.id != int(self.admin_id):
+                    self.bot.reply_to(message, self.bot_replies['not_admin'])
                     return
+                else:
+                    if len(parts) < 2:
+                        self.bot.reply_to(message, "Idi nahui ne tot format")
+                    nickname = parts[1]
+                    
+                    user = self.database.find_user_nickname(nickname)
+                    if user is None:
+                        self.bot.reply_to(message, "Пользователь не найден")
+                        return
+                    
+                    self.bot.ban_chat_member(message.chat.id, user['user_id'])
+                    self.bot.send_message(message.chat.id, "Пользователь забанен")
                 
-                self.bot.ban_chat_member(message.chat.id, user['user_id'])
-                self.bot.send_message(message.chat.id, "Пользователь забанен")
-            
             else:
                 print('Ignoring messages')
 
