@@ -392,6 +392,58 @@ class Handlers:
             self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
             self.log(f"Admin {message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
             
+    def send_message_to_user(self, message):
+        """Send a custom message from the admin to a specific user."""
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            parts = message.text.split(maxsplit=2)
+            if len(parts) < 3:
+                self.bot.reply_to(message, "Неверный формат. Используйте: /send <username> <сообщение>")
+                return
+
+            try:
+                nickname = parts[1]
+                custom_message = parts[2]
+
+                # Check if the user exists in the database
+                user = self.database.find_user_nickname(nickname)
+                if user is None:
+                    self.bot.reply_to(message, "Пользователь с указанным ID не найден.")
+                    return
+
+                # Send the message to the specified user
+                self.bot.send_message(user['user_id'], custom_message)
+                self.bot.reply_to(message, f"Сообщение успешно отправлено пользователю {user['nickname']}.")
+                self.log(f"Admin sent a message to {user['nickname']}: {custom_message}", message.from_user.id)
+
+            except ValueError:
+                self.bot.reply_to(message, "ID пользователя должен быть числом.")
+                
+    def ban_user(self, message):
+        if message.from_user.id != int(self.admin_id):
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+        else:
+            parts = message.text.split(maxsplit=1)
+            print(parts)
+            if parts[0] == "бан" or parts[0] == "Бан":
+                if len(parts) < 2:
+                    self.bot.reply_to(message, "Idi nahui ne tot format")
+                nickname = parts[1]
+                
+                user = self.database.find_user_nickname(nickname)
+                if user is None:
+                    self.bot.reply_to(message, "Пользователь не найден")
+                    return
+                
+                self.bot.ban_chat_member(message.chat.id, user['user_id'])
+                self.bot.send_message(message.chat.id, "Пользователь забанен")
+            
+            else:
+                print('Ignoring messages')
+
     def setup_handlers(self):
         """ Setup bot handlers"""
         @self.bot.message_handler(commands=['start'])
@@ -464,6 +516,14 @@ class Handlers:
             
         # ^ Admin commands ^
         
+        @self.bot.message_handler(commands=['send'])
+        def send(message):
+            self.send_message_to_user(message)
+            
+        @self.bot.message_handler(func=lambda message: True)
+        def ban(message):
+            self.ban_user(message)
+
         @self.bot.message_handler(commands=['all_users'])
         def get_all_users(message):
             self.all_users(message)
