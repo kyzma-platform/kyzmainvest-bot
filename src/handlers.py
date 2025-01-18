@@ -558,7 +558,7 @@ class Handlers:
 
             parts = message.text.split(maxsplit=1)
             if parts[0] == "кузьма" or parts[0] == "Кузьма":
-                self.bot.send_message(self.admin_id, message.text)
+                self.bot.send_message(self.admin_id, f"@{message.from_user.username}: {message.text}")
                 
             
         threading.Thread(target=self.setup_daily_reminder, daemon=True).start()
