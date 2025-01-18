@@ -420,30 +420,6 @@ class Handlers:
 
             except ValueError:
                 self.bot.reply_to(message, "ID пользователя должен быть числом.")
-                
-    def ban_user(self, message):
-
-            parts = message.text.split(maxsplit=1)
-            print(parts)
-            if parts[0] == "бан" or parts[0] == "Бан":
-                if int(message.from_user.id) != int(self.admin_id):
-                    self.bot.reply_to(message, self.bot_replies['not_admin'])
-                    return
-                else:
-                    if len(parts) < 2:
-                        self.bot.reply_to(message, "Idi nahui ne tot format")
-                    nickname = parts[1]
-                    
-                    user = self.database.find_user_nickname(nickname)
-                    if user is None:
-                        self.bot.reply_to(message, "Пользователь не найден")
-                        return
-                    
-                    self.bot.ban_chat_member(message.chat.id, user['user_id'])
-                    self.bot.send_message(message.chat.id, "Пользователь забанен")
-                
-            else:
-                print('Ignoring messages')
 
     def setup_handlers(self):
         """ Setup bot handlers"""
@@ -520,10 +496,6 @@ class Handlers:
         @self.bot.message_handler(commands=['send'])
         def send(message):
             self.send_message_to_user(message)
-            
-        # @self.bot.message_handler(func=lambda message: True)
-        # def ban(message):
-        #     self.ban_user(message)
 
         @self.bot.message_handler(commands=['all_users'])
         def get_all_users(message):
@@ -578,6 +550,16 @@ class Handlers:
         @self.bot.message_handler(commands=['transfer'])
         def transfer(message):
             self.transfer_coins(message)
+            
+        @self.bot.message_handler(func=lambda message: True)  # Catch all other messages
+        def forward_to_admin(message):
+            user_id = message.from_user.id
+            username = message.from_user.username or "Unknown"
+
+            parts = message.text.split(maxsplit=1)
+            if parts[0] == "кузьма" or parts[0] == "Кузьма":
+                self.bot.send_message(self.admin_id, message.text)
+                
             
         threading.Thread(target=self.setup_daily_reminder, daemon=True).start()
 
