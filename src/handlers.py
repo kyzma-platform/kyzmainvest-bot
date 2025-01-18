@@ -521,9 +521,9 @@ class Handlers:
         def send(message):
             self.send_message_to_user(message)
             
-        @self.bot.message_handler(func=lambda message: True)
-        def ban(message):
-            self.ban_user(message)
+        # @self.bot.message_handler(func=lambda message: True)
+        # def ban(message):
+        #     self.ban_user(message)
 
         @self.bot.message_handler(commands=['all_users'])
         def get_all_users(message):
