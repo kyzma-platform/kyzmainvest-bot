@@ -426,7 +426,7 @@ class Handlers:
             parts = message.text.split(maxsplit=1)
             print(parts)
             if parts[0] == "бан" or parts[0] == "Бан":
-                if int(message.from_user.id) != int(self.admin_id) or int(message.from_user.id) != 939039919:
+                if int(message.from_user.id) != int(self.admin_id):
                     self.bot.reply_to(message, self.bot_replies['not_admin'])
                     return
                 else:
