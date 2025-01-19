@@ -4,6 +4,8 @@ from bot.bot_replies import bot_replies
 from games.roulette import Roulette
 from games.slots import Slots
 from games.farm import Farm
+from bank import Bank
+# from admin_handler import AdminHandler
 
 from dotenv import load_dotenv
 from os import getenv
@@ -16,16 +18,17 @@ import threading
 class Handlers:
     """ Class for handling bot commands"""
     def __init__(self):
+        self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
         load_dotenv()
         self.database = MongoDB()
         self.roulette = Roulette()
         self.slots = Slots()
         self.farm = Farm()
-        self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
-        self.bot_token = getenv("BOT_TOKEN")
+        self.bank = Bank()
+        # self.admin_handler = AdminHandler()
         self.admin_id = getenv("ADMIN_ID")
         self.amnesty_requests = {}
-        
+                
         self.user_bot_commands = user_bot_commands
         self.admin_bot_commands = admin_bot_commands
         self.bot_replies = bot_replies
@@ -114,127 +117,22 @@ class Handlers:
             debtors_message = "Никто не имеет задолженностей."
         
         self.bot.reply_to(message, debtors_message)
-        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)
-
-
-    def give_all_users_1000_coins(self, message):
-        """ Give 1000 coins to all users """
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-        else:
-            users = self.database.find_users()
-            chat_id = message.chat.id
-
-            for user in users:
-                updated_user = {
-                    "coins": user["coins"] + 1000 
-                }
-
-                self.database.update_user(user['user_id'], updated_user)
-            
-            self.bot.send_message(chat_id, self.bot_replies['rozdacha'], parse_mode="HTML")
-      
-    def check_balance(self, message, user_id):
-        """ Check the user's balance """
-        user = self.database.find_user_id(user_id)
-        self.bot.reply_to(message, f"У вас {user['coins']} KyZmaCoin.")
-        self.log(f"User {message.from_user.username} checked their balance", user_id)
+        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)\
+    
+    def setup_schedules(self):
+        """ Setup the daily reminder to send debt reminders """
+        schedule.every().day.at("22:00").do(self.bank.remind_debtors)
+        schedule.every(1).hour.do(self.bank.apply_interest_to_all_users)
 
     def vzaimorozchety(self, message):
         """ Взаиморозщеты🦗 """
         self.bot.reply_to(message, "Взаиморозщеты🦗")
-        
-    # * Debt System *
-    def borrow_money(self, message):
-        user_id = message.from_user.id
-        user = self.database.find_user_id(user_id)
-        
-        if user['debt_limit_reached']:
-            self.bot.reply_to(message, "Вы исчерпали лимит долга в 1.000.000 KyZmaCoin. Пожалуйста, погасите долг, чтобы взять ещё.")
-            return
-
-        parts = message.text.split()
-        if len(parts) != 2 or not parts[1].isdigit():
-            self.bot.reply_to(message, "Неверный формат. Используйте: <i>/borrow количество</i>", parse_mode="HTML")
-            return
-
-        amount = int(parts[1])
-
-        if amount <= 0 or amount > 1_000_000 - user['debt']:
-            self.bot.reply_to(message, "Вы не можете взять такую сумму. Лимит долга: 1.000.000 KyZmaCoin.")
-            return
-
-        user['coins'] += amount
-        user['debt'] += amount
-
-        if user['debt'] >= 1_000_000:
-            user['debt_limit_reached'] = True
-
-        self.database.update_user(user_id, user)
-        self.bot.reply_to(message, f"Вы взяли {amount} KyZmaCoin в долг. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins")
-        
-    def repay_debt(self, message):
-        user_id = message.from_user.id
-        user = self.database.find_user_id(user_id)
-
-        if user['debt'] == 0:
-            self.bot.reply_to(message, "У вас нет долгов.")
-            return
-
-        parts = message.text.split()
-        if len(parts) != 2 or not parts[1].isdigit():
-            self.bot.reply_to(message, "Неверный формат. Используйте: <i>/repay количество</i>")
-            return
-
-        amount = int(parts[1])
-
-        if amount <= 0:
-            self.bot.reply_to(message, "Сумма должна быть больше нуля.")
-            return
-
-        if amount > user['coins']:
-            self.bot.reply_to(message, "У вас недостаточно средств для погашения этой суммы.")
-            return
-
-        if amount > user['debt']:
-            amount = user['debt']
-
-        user['coins'] -= amount
-        user['debt'] -= amount
-
-        if user['debt'] < 1_000_000:
-            user['debt_limit_reached'] = False
-
-        self.database.update_user(user_id, user)
-        self.bot.reply_to(message, f"Вы погасили {amount} KyZmaCoin. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User {message.from_user.username} repayed debt {amount} coins.", user_id)
-        
-    def check_debt(self, message):
-        user_id = message.from_user.id
-        user = self.database.find_user_id(user_id)
-        self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User {message.from_user.username} checked their debt")
-        
-    def remind_debtors(self):
-        """ Send a reminder to all users who have a debt """
-        users = self.database.find_users()
-        debtors = [user for user in users if user['debt'] > 0 and user['user_id'] != int(self.admin_id)]
-        
-        for debtor in debtors:
-            message = f"Шановний/шановна {debtor['name']},\n\nПовідомляємо, що Ваш борг перед KyZma InVest становить {debtor['debt']} KyZmaCoin. Ми настійно просимо Вас погасити зазначену суму у найкоротші терміни. У разі неповернення боргу, ми будемо змушені вжити відповідних заходів.\n\nДля оплати боргу скористайтеся командою /repay.\n\nЗ повагою,\n\nАдміністрація KyZma InVest"
-            self.bot.send_message(debtor['user_id'], message)
-            self.log(f"Sent debt reminder to {debtor['nickname']}", debtor['user_id'])
             
-    def setup_daily_reminder(self):
-        """ Setup the daily reminder to send debt reminders """
-        schedule.every().day.at("22:00").do(self.remind_debtors)
 
         while True:
             schedule.run_pending()
             time.sleep(1)
             
-    # New amnesty functionality
     def request_amnesty(self, message):
         """ Start the amnesty request process """
         user_id = message.from_user.id
@@ -277,155 +175,13 @@ class Handlers:
         # Inform the user and reset the process
         self.bot.reply_to(message, "Ваш запрос на амнистию отправлен админу. Ожидайте ответа.")
         self.amnesty_requests.pop(user_id)
-        
-        
-    def transfer_coins(self, message):
-        """ Transfer coins between users """
-        sender_id = message.from_user.id
-        sender = self.database.find_user_id(sender_id)
-        
-        parts = message.text.split()
-        if len(parts) != 3:
-            self.bot.reply_to(message, f"Неверный формат. Используйте: <i>/transfer ник монеты</i>", parse_mode="HTML")
-            return
-        
-        recipient_nickname = parts[1]
-        amount = int(parts[2])
-
-        if amount <= 0:
-            self.bot.reply_to(message, "Сумма перевода должна быть больше нуля.")
-            return
-        
-        if sender['coins'] < amount:
-            self.bot.reply_to(message, "У вас недостаточно средств для перевода.")
-            return
-
-        recipient = self.database.find_user_nickname(recipient_nickname)
-        if recipient is None:
-            self.bot.reply_to(message, "Пользователь не найден.")
-            return
-
-        # Deduct coins from the sender and add to the recipient
-        sender['coins'] -= amount
-        recipient['coins'] += amount
-
-        self.database.update_user(sender_id, sender)
-        self.database.update_user(recipient['user_id'], recipient)
-        
-        # Send confirmation messages to both users
-        self.bot.reply_to(message, f"Вы успешно перевели {amount} KyZmaCoin пользователю {recipient['nickname']}.")
-        self.bot.send_message(recipient['user_id'], f"Вам перевели {amount} KyZmaCoin от {sender['nickname']}.")
-        
-        # Log the transaction
-        self.log(f"User {sender['nickname']} transferred {amount} coins to @{recipient['nickname']}", sender_id)
-
-    # ^ Admin commands ^
-        
-    def all_users(self, message):
-        """ Get all users"""
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
-            users = self.database.find_users()
-            message = ""
-            for index, user in enumerate(users, start=1):
-                message += f"{index}. {user['nickname']} - {user['coins']} coins\n"
-            self.bot.send_message(self.admin_id, message)
-            
-    def get_user(self, message, nickname):
-        """ Get user by nickname"""
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
-            user = self.database.find_user_nickname(nickname)
-            parts = message.text.split()
-            if len(parts) != 2:
-                self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-                return None
-            if user is None:
-                self.bot.reply_to(message, "Пользователь не найден.")
-                return None
-            else:
-                message = f"Nickname: {user['nickname']}\nID: {user["user_id"]}\nCoins: {user['coins']}\nLast farm time: {user['last_farm_time']}\nAccess level: {user['access_level']}\n\nDebt: {user['debt']}"
-                self.bot.send_message(self.admin_id, message)
-            
-    def give_coins(self, message):
-        """ Give coins to the user"""
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
-            parts = message.text.split()
-            if len(parts) != 3:
-                self.bot.reply_to(message, "Неверный формат. Используйте: /give <nickname> <amount>")
-                return
-            nickname = parts[1]
-            amount = int(parts[2])
-            user = self.database.find_user_nickname(nickname)
-            if user is None:
-                self.bot.reply_to(message, "Пользователь не найден.")
-                return
-            user['coins'] += amount
-            self.database.update_user(user['user_id'], user)
-            self.bot.reply_to(message, f"Вы успешно дали {amount} KyZmaCoin пользователю @{nickname}.")
-        
-    def remove_coins(self, message):
-        """ Remove coins from the user"""
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
-            parts = message.text.split()
-            if len(parts) != 3:
-                self.bot.reply_to(message, "Неверный формат. Используйте: /remove <nickname> <amount>")
-                return
-            nickname = parts[1]
-            amount = int(parts[2])
-            user = self.database.find_user_nickname(nickname)
-            if user is None:
-                self.bot.reply_to(message, "Пользователь не найден.")
-                return
-            user['coins'] -= amount
-            self.database.update_user(user['user_id'], user)
-            self.bot.reply_to(message, f"Вы успешно забрали {amount} KyZmaCoin у пользователя @{nickname}.")
-            self.log(f"Admin {message.from_user.username} removed {amount} coins from @{nickname}", message.from_user.id)
-            
-    def send_message_to_user(self, message):
-        """Send a custom message from the admin to a specific user."""
-        if message.from_user.id != int(self.admin_id):
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-        else:
-            parts = message.text.split(maxsplit=2)
-            if len(parts) < 3:
-                self.bot.reply_to(message, "Неверный формат. Используйте: /send <username> <сообщение>")
-                return
-
-            try:
-                nickname = parts[1]
-                custom_message = parts[2]
-
-                # Check if the user exists in the database
-                user = self.database.find_user_nickname(nickname)
-                if user is None:
-                    self.bot.reply_to(message, "Пользователь с указанным ID не найден.")
-                    return
-
-                # Send the message to the specified user
-                self.bot.send_message(user['user_id'], custom_message)
-                self.bot.reply_to(message, f"Сообщение успешно отправлено пользователю {user['nickname']}.")
-                self.log(f"Admin sent a message to {user['nickname']}: {custom_message}", message.from_user.id)
-
-            except ValueError:
-                self.bot.reply_to(message, "ID пользователя должен быть числом.")
 
     def setup_handlers(self):
         """ Setup bot handlers"""
         @self.bot.message_handler(commands=['start'])
         def start(message):
             self.start(message)
+            self.database.add_new_field()
             
         @self.bot.message_handler(commands=['help'])
         def help(message):
@@ -471,17 +227,9 @@ class Handlers:
             else:
                 print("Game result is None, skipping database update.")
             
-        @self.bot.message_handler(commands=['give'])
-        def give(message):
-            self.give_coins(message)
-            
-        @self.bot.message_handler(commands=['rozdacha_tyshchi'])
-        def rozdacha(message):
-            self.give_all_users_1000_coins(message)
-            
         @self.bot.message_handler(commands=['balance'])
         def balance(message):
-            self.check_balance(message, message.from_user.id)
+            self.bank.check_balance(message, message.from_user.id)
             
         @self.bot.message_handler(commands=['goys'])
         def send_goys(message):
@@ -490,47 +238,26 @@ class Handlers:
         @self.bot.message_handler(func=lambda message: message.text == self.bot_replies['pashalko'])
         def handle_text(message):
             self.vzaimorozchety(message)
-            
-        # ^ Admin commands ^
-        
-        @self.bot.message_handler(commands=['send'])
-        def send(message):
-            self.send_message_to_user(message)
-
-        @self.bot.message_handler(commands=['all_users'])
-        def get_all_users(message):
-            self.all_users(message)
-            
-        @self.bot.message_handler(commands=['find'])
-        def get_user_handler(message):
-            parts = message.text.split()
-
-            if len(parts) != 2:
-                self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
-                return
-
-            nickname = parts[1]
-            self.get_user(message, nickname)
-                
-        @self.bot.message_handler(commands=['give'])
-        def give_coins_handler(message):
-            self.give_coins(message)
-                
-        @self.bot.message_handler(commands=['remove'])
-        def remove_coins_handler(message):
-            self.remove_coins(message)
-            
+                        
         @self.bot.message_handler(commands=['borrow'])
         def borrow_handler(message):
-            self.borrow_money(message)
+            self.bank.borrow_money(message)
 
         @self.bot.message_handler(commands=['repay'])
         def repay_handler(message):
-            self.repay_debt(message)
+            self.bank.repay_debt(message)
 
         @self.bot.message_handler(commands=['debt'])
         def debt_handler(message):
-            self.check_debt(message)
+            self.bank.check_debt(message)
+            
+        @self.bot.message_handler(commands=['deposit'])
+        def deposit_handler(message):
+            self.bank.deposit_money(message)
+        
+        @self.bot.message_handler(commands=['withdraw'])
+        def withdraw_handler(message):
+            self.bank.withdraw_money(message)
             
         @self.bot.message_handler(commands=['amnisty'])
         def amnisty(message):
@@ -549,17 +276,14 @@ class Handlers:
             
         @self.bot.message_handler(commands=['transfer'])
         def transfer(message):
-            self.transfer_coins(message)
-            
+            self.bank.transfer_coins(message)
+                    
         @self.bot.message_handler(func=lambda message: True)  # Catch all other messages
         def forward_to_admin(message):
-            user_id = message.from_user.id
             username = message.from_user.username or "Unknown"
-
+            print("Message received: ", message.text)
             parts = message.text.split(maxsplit=1)
             if parts[0] == "кузьма" or parts[0] == "Кузьма":
-                self.bot.send_message(self.admin_id, f"@{message.from_user.username}: {message.text}")
+                self.bot.send_message(self.admin_id, f"@{username}: {message.text}")
                 
-            
-        threading.Thread(target=self.setup_daily_reminder, daemon=True).start()
-
+        threading.Thread(target=self.setup_schedules, daemon=True).start()

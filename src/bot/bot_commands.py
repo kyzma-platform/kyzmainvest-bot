@@ -11,6 +11,8 @@ user_bot_commands = {
     'repay': 'Выплатить долг',
     'debt': 'Посмотреть долг',
     'transfer': 'Перевести KyZmaCoin',
+    'deposit': "Положить коины на депозит",
+    'withdraw': "Забрать коины с депозита",
 }
 
 admin_bot_commands = {

@@ -61,11 +61,11 @@ class MongoDB:
         self.users_collection.update_one({"user_id": user_id}, {"$set": update})
         return f"User {user_id} updated {update}"
     
-    # def add_new_field(self):
-    #     self.users_collection.update_many(
-    #         {},  # Empty filter, meaning all documents
-    #         {"$set": {"name": None}}  # Add 'name' field with None or default value
-    # )
+    def add_new_field(self):
+        self.users_collection.update_many(
+            {},  # Empty filter, meaning all documents
+            {"$set": {"deposit": 0}}  # Add 'name' field with None or default value
+    )
 
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None"""
