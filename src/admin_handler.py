@@ -114,6 +114,53 @@ class AdminHandler:
             self.bot.reply_to(message, f"Вы успешно забрали {amount} монет у пользователя {nickname}.")
         except ValueError:
             self.bot.reply_to(message, "Сумма должна быть числом.")
+        
+    def send_message_to_users(self, message):
+        """Send a custom message to all users."""
+        if message.from_user.id != self.admin_id:
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+
+        parts = message.text.split(maxsplit=1)
+        if len(parts) != 2:
+            self.bot.reply_to(message, "Неверный формат. Используйте: /send_message <message>")
+            return
+
+        user_message = parts[1]
+        users = self.database.find_users()
+
+        for user in users:
+            try:
+                self.bot.send_message(user["user_id"], user_message)
+            except Exception as e:
+                print(f"Failed to send message to {user['nickname']}: {e}")
+
+        self.bot.reply_to(message, "Сообщение отправлено всем пользователям.")
+        
+    def send_message_to_one_user(self, message):
+        """Send a custom message to a specific user by nickname."""
+        if message.from_user.id != self.admin_id:
+            self.bot.reply_to(message, self.bot_replies['not_admin'])
+            return
+
+        parts = message.text.split(maxsplit=2)
+        if len(parts) != 3:
+            self.bot.reply_to(message, "Неверный формат. Используйте: /send_message_to_user <nickname> <message>")
+            return
+
+        nickname = parts[1]
+        user_message = parts[2]
+        user = self.database.find_user_nickname(nickname)
+
+        if user is None:
+            self.bot.reply_to(message, "Пользователь не найден.")
+            return
+
+        try:
+            self.bot.send_message(user["user_id"], user_message)
+            self.bot.reply_to(message, f"Сообщение отправлено пользователю {nickname}.")
+        except Exception as e:
+            self.bot.reply_to(message, f"Не удалось отправить сообщение пользователю {nickname}. Ошибка: {e}")
 
     def setup_admin_handler(self):
         @self.bot.message_handler(commands=["rozdacha"])
@@ -135,5 +182,11 @@ class AdminHandler:
         @self.bot.message_handler(commands=["remove"])
         def remove_coins_handler(message):
             self.remove_coins(message)
-
             
+        @self.bot.message_handler(commands=['send_all'])
+        def send_all(message):
+            self.send_message_to_users(message)
+            
+        @self.bot.message_handler(commands=["send"])
+        def send_message_to_user_handler(message):
+            self.send_message_to_one_user(message)

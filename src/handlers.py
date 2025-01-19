@@ -129,10 +129,6 @@ class Handlers:
         self.bot.reply_to(message, "Взаиморозщеты🦗")
             
 
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
-            
     def request_amnesty(self, message):
         """ Start the amnesty request process """
         user_id = message.from_user.id
