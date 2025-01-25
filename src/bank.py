@@ -36,8 +36,8 @@ class Bank:
 
     def calculate_hourly_compound_interest(self, principal, annual_rate, hours):
         """ Calculate the compound interest applied every hour """
-        n = 8760  # Number of compounding periods per year (hourly)
-        t = hours / 8760  # Time in years
+        n = 24  # Number of compounding periods per year (hourly)
+        t = hours / 24  # Time in years
         amount = principal * (1 + annual_rate / n) ** (n * t)
         return round(amount)
 
