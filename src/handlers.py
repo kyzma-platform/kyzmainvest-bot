@@ -273,6 +273,10 @@ class Handlers:
         @self.bot.message_handler(commands=['transfer'])
         def transfer(message):
             self.bank.transfer_coins(message)
+            
+        @self.bot.message_handler(commands=['apply'])
+        def apply_interest(message):
+            self.bank.apply_interest_to_all_users()
                     
         @self.bot.message_handler(func=lambda message: True)  # Catch all other messages
         def forward_to_admin(message):

@@ -4,6 +4,7 @@ from bot.bot_replies import bot_replies
 import telebot
 from os import getenv
 from database import MongoDB
+import threading
 
 class Bank:
     def __init__(self):
@@ -12,6 +13,20 @@ class Bank:
         self.admin_id = int(getenv("ADMIN_ID"))
         self.database = MongoDB()
 
+        # Schedule hourly interest application
+        schedule.every().hour.do(self.apply_interest_to_all_users)
+
+        # Start the schedule in a separate thread
+        self.start_scheduler()
+
+    def start_scheduler(self):
+        """Start a separate thread for the schedule to run independently."""
+        def run_scheduler():
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+        threading.Thread(target=run_scheduler, daemon=True).start()
 
     def log(self, message, user_id):
         """ Log messages to the admin in bot chat """
@@ -24,7 +39,7 @@ class Bank:
         n = 8760  # Number of compounding periods per year (hourly)
         t = hours / 8760  # Time in years
         amount = principal * (1 + annual_rate / n) ** (n * t)
-        return amount
+        return round(amount)
 
     def apply_interest_to_all_users(self):
         """ Apply hourly compound interest to all users' deposits """
