@@ -90,7 +90,7 @@ class Handlers:
         top_users_message = "Топ слоняр в KyZma InVest:\n"
         
         for i, user in enumerate(sorted_users[:10], start=1):
-            top_users_message += f"{i}. {user['nickname']} - {user['coins']} KyZmaCoin\n"
+            top_users_message += f"{i}. {user['nickname'][1:]} - {user['coins']} KyZmaCoin\n"
         
         if not sorted_users:
             top_users_message = self.bot_replies['error_no_users']
@@ -111,7 +111,7 @@ class Handlers:
         debtors_message = "Список должников в KyZma InVest:\n"
         
         for i, debtor in enumerate(sorted_debtors, start=1):
-            debtors_message += f"{i}. {debtor['nickname']} - {debtor['debt']} KyZmaCoin\n"
+            debtors_message += f"{i}. {debtor['nickname'][1:]} - {debtor['debt']} KyZmaCoin\n"
         
         if not sorted_debtors:
             debtors_message = "Никто не имеет задолженностей."
