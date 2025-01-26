@@ -1,5 +1,5 @@
 from handlers import Handlers
-from admin_handler import AdminHandler
+from admin_handler import AdminHandler, AccessLevel
 
 class Bot:
     def __init__(self):
@@ -9,6 +9,7 @@ class Bot:
         
     def run_bot(self):
         self.admin_handlers.setup_admin_handler()
+        self.bot.add_custom_filter(AccessLevel())
         self.handlers.setup_handlers()
         self.handlers.set_commands()
         self.bot.infinity_polling(skip_pending=True)

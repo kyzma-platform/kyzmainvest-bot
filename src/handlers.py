@@ -110,14 +110,20 @@ class Handlers:
         
         debtors_message = "Список должников в KyZma InVest:\n"
         
-        for i, debtor in enumerate(sorted_debtors, start=1):
-            debtors_message += f"{i}. {debtor['nickname'][1:]} - {debtor['debt']} KyZmaCoin\n"
+        for i, debtor in enumerate(sorted_debtors[:10], start=1):
+            nickname = debtor['nickname']
+            if nickname:
+                nickname = nickname[1:]  # Убираем первый символ
+            else:
+                nickname = "None"  # Запасное значение, если nickname отсутствует
+
+            debtors_message += f"{i}. {nickname} - {debtor['debt']} KyZmaCoin\n"
         
         if not sorted_debtors:
             debtors_message = "Никто не имеет задолженностей."
         
-        self.bot.reply_to(message, debtors_message)
-        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)\
+        self.bot.send_message(message.chat.id, debtors_message)
+        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)
     
     def setup_schedules(self):
         """ Setup the daily reminder to send debt reminders """
@@ -171,6 +177,9 @@ class Handlers:
         # Inform the user and reset the process
         self.bot.reply_to(message, "Ваш запрос на амнистию отправлен админу. Ожидайте ответа.")
         self.amnesty_requests.pop(user_id)
+        
+    def brekotkin(self, message):
+        self.bot.send_sticker(message.chat.id, 'CAACAgIAAxUAAWeWoeYf-5vui6OHXEb8vnX1obM_AAJMaAAC-iC4SEoPeyXlvEOhNgQ')
 
     def setup_handlers(self):
         """ Setup bot handlers"""
@@ -277,12 +286,16 @@ class Handlers:
         @self.bot.message_handler(commands=['apply'])
         def apply_interest(message):
             self.bank.apply_interest_to_all_users()
+            
+        @self.bot.message_handler(commands=['brekotkin'])
+        def send_brekotkin(message):
+            self.brekotkin(message)
                     
         @self.bot.message_handler(func=lambda message: True)  # Catch all other messages
         def forward_to_admin(message):
             username = message.from_user.username or "Unknown"
             print("Message received: ", message.text)
-            parts = message.text.split(maxsplit=1)
+            parts = message.text.split()
             if parts[0] == "кузьма" or parts[0] == "Кузьма":
                 self.bot.send_message(self.admin_id, f"@{username}: {message.text}")
                 

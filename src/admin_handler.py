@@ -2,6 +2,18 @@ from bot.bot_commands import admin_bot_commands
 from bot.bot_replies import bot_replies
 from os import getenv
 from database import MongoDB
+import telebot
+
+class AccessLevel(telebot.custom_filters.AdvancedCustomFilter):  
+    key='access_level'
+    print("check1")
+    @staticmethod
+    def check(message, levels):
+        print("check2")
+        access_level = MongoDB().get_access_level(message.from_user.id)
+        print(access_level)
+        return access_level in levels
+        
 
 class AdminHandler:
     def __init__(self, bot):
@@ -9,14 +21,10 @@ class AdminHandler:
         self.database = MongoDB()
         self.bot_commands = admin_bot_commands
         self.bot_replies = bot_replies
-        self.admin_id = int(getenv("ADMIN_ID"))  # Ensure it's an integer
+        self.owner = getenv("ADMIN_ID")
 
     def give_all_users_1000_coins(self, message):
         """Give 1000 coins to all users."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         users = self.database.find_users()
         chat_id = message.chat.id
 
@@ -28,22 +36,14 @@ class AdminHandler:
 
     def all_users(self, message):
         """Get all users."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         users = self.database.find_users()
         response_message = ""
         for index, user in enumerate(users, start=1):
             response_message += f"{index}. {user['nickname']} - {user['coins']} coins\n"
-        self.bot.send_message(self.admin_id, response_message)
+        self.bot.send_message(message.chat.id, response_message)
 
     def get_user(self, message):
         """Get user by nickname."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         parts = message.text.split()
         if len(parts) != 2:
             self.bot.reply_to(message, "Неверный формат. Используйте: /find <nickname>")
@@ -63,14 +63,10 @@ class AdminHandler:
             f"Access level: {user['access_level']}\n"
             f"Debt: {user['debt']}"
         )
-        self.bot.send_message(self.admin_id, response_message)
+        self.bot.send_message(message.chat.id, response_message)
 
     def give_coins(self, message):
         """Give coins to a user."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         parts = message.text.split()
         if len(parts) != 3:
             self.bot.reply_to(message, "Неверный формат. Используйте: /give <nickname> <amount>")
@@ -92,10 +88,6 @@ class AdminHandler:
 
     def remove_coins(self, message):
         """Remove coins from a user."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         parts = message.text.split()
         if len(parts) != 3:
             self.bot.reply_to(message, "Неверный формат. Используйте: /remove <nickname> <amount>")
@@ -114,13 +106,9 @@ class AdminHandler:
             self.bot.reply_to(message, f"Вы успешно забрали {amount} монет у пользователя {nickname}.")
         except ValueError:
             self.bot.reply_to(message, "Сумма должна быть числом.")
-        
+
     def send_message_to_users(self, message):
         """Send a custom message to all users."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         parts = message.text.split(maxsplit=1)
         if len(parts) != 2:
             self.bot.reply_to(message, "Неверный формат. Используйте: /send_message <message>")
@@ -136,13 +124,9 @@ class AdminHandler:
                 print(f"Failed to send message to {user['nickname']}: {e}")
 
         self.bot.reply_to(message, "Сообщение отправлено всем пользователям.")
-        
+
     def send_message_to_one_user(self, message):
         """Send a custom message to a specific user by nickname."""
-        if message.from_user.id != self.admin_id:
-            self.bot.reply_to(message, self.bot_replies['not_admin'])
-            return
-
         parts = message.text.split(maxsplit=2)
         if len(parts) != 3:
             self.bot.reply_to(message, "Неверный формат. Используйте: /send_message_to_user <nickname> <message>")
@@ -161,32 +145,52 @@ class AdminHandler:
             self.bot.reply_to(message, f"Сообщение отправлено пользователю {nickname}.")
         except Exception as e:
             self.bot.reply_to(message, f"Не удалось отправить сообщение пользователю {nickname}. Ошибка: {e}")
-
+            
+    def send_message_to_mafia(self, message):
+        parts = message.text.split(maxsplit=1)
+        if len(parts) != 2:
+            self.bot.reply_to(message, "Ee blya format ne tot dalbaebina")
+            return
+        
+        bot_message = parts[1]
+        chat_id = -4596713346
+        
+        try:
+            self.bot.send_message(chat_id, bot_message)
+            self.bot.reply_to(message, "Потужне повидомлення було надислано.")
+        except Exception as e:
+            self.bot.reply_to(message, f"Помылка: {e}")
+            
+        
     def setup_admin_handler(self):
         @self.bot.message_handler(commands=["rozdacha"])
         def rozdacha_handler(message):
             self.give_all_users_1000_coins(message)
 
-        @self.bot.message_handler(commands=["all"])
+        @self.bot.message_handler(commands=["all"], access_level=['owner'])
         def all_users_handler(message):
             self.all_users(message)
 
-        @self.bot.message_handler(commands=["find"])
+        @self.bot.message_handler(commands=["find"], access_level=['owner'])
         def find_user_handler(message):
             self.get_user(message)
 
-        @self.bot.message_handler(commands=["give"])
+        @self.bot.message_handler(commands=["give"], access_level=['owner'])
         def give_coins_handler(message):
             self.give_coins(message)
 
-        @self.bot.message_handler(commands=["remove"])
+        @self.bot.message_handler(commands=["remove"], access_level=['owner'])
         def remove_coins_handler(message):
             self.remove_coins(message)
             
-        @self.bot.message_handler(commands=['send_all'])
+        @self.bot.message_handler(commands=['send_all'], access_level=['owner'])
         def send_all(message):
             self.send_message_to_users(message)
             
-        @self.bot.message_handler(commands=["send"])
+        @self.bot.message_handler(commands=["send"], access_level=['owner'])
         def send_message_to_user_handler(message):
             self.send_message_to_one_user(message)
+            
+        @self.bot.message_handler(commands=['mafia'], access_level=['owner', 'admin'])
+        def send_to_mafia(message):
+            self.send_message_to_mafia(message)
