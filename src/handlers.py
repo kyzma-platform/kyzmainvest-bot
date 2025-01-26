@@ -83,7 +83,7 @@ class Handlers:
         """ Send top 10 users by coins, excluding the admin """
         users = self.database.find_users()
         
-        users = [user for user in users if user['user_id'] != int(self.admin_id)]
+        users = [user for user in users if user['user_id']]
         
         sorted_users = sorted(users, key=lambda x: x['coins'], reverse=True)
         
