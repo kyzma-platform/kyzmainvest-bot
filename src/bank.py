@@ -13,10 +13,8 @@ class Bank:
         self.admin_id = int(getenv("ADMIN_ID"))
         self.database = MongoDB()
 
-        # Schedule hourly interest application
         schedule.every().hour.do(self.apply_interest_to_all_users)
 
-        # Start the schedule in a separate thread
         self.start_scheduler()
 
     def start_scheduler(self):
@@ -43,16 +41,19 @@ class Bank:
 
     def apply_interest_to_all_users(self):
         """ Apply hourly compound interest to all users' deposits """
-        users = self.database.find_users()
-        annual_rate = 0.05  # Example annual interest rate of 5%
-        for user in users:
-            if 'deposit' in user:  # Ensure the user has a deposit field
-                principal = user['deposit']
-                new_amount = self.calculate_hourly_compound_interest(principal, annual_rate, 1)
-                user['deposit'] = new_amount
-                self.database.update_user(user['user_id'], user)
-                self.bot.send_message(self.admin_id, f"Interest applied to user {user['nickname']}! New deposit: {user['deposit']}")
-                
+        try:
+            users = self.database.find_users()
+            annual_rate = 0.05  # Example annual interest rate of 5%
+            for user in users:
+                if 'deposit' in user:  # Ensure the user has a deposit field
+                    principal = user['deposit']
+                    new_amount = self.calculate_hourly_compound_interest(principal, annual_rate, 1)
+                    user['deposit'] = new_amount
+                    self.database.update_user(user['user_id'], user)
+                    self.bot.send_message(self.admin_id, f"Interest applied to {user['nickname']}: {user['deposit']}")
+        except Exception as e:
+            self.bot.send_message(self.admin_id, f"Error in applying interest: {e}")
+
     
     def deposit_money(self, message):
         """ Deposit money into the user's deposit account """
@@ -142,7 +143,7 @@ class Bank:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы взяли {amount} KyZmaCoin в долг. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins")
+        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins", user_id)
 
     def repay_debt(self, message):
         user_id = message.from_user.id
