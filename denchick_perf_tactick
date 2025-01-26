@@ -1,0 +1,11 @@
+def calculate_bets(a, b):
+    count = 0
+    current_bet = b
+
+    while a >= current_bet:
+        a -= current_bet
+        current_bet *= 2.1
+        count += 1
+
+    return count
+#denchik_tactick
