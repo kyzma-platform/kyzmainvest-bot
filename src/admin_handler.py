@@ -153,7 +153,7 @@ class AdminHandler:
             return
         
         bot_message = parts[1]
-        chat_id = -4596713346
+        chat_id = -1002335695571
         
         try:
             self.bot.send_message(chat_id, bot_message)
