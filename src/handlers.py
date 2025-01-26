@@ -179,6 +179,7 @@ class Handlers:
         self.amnesty_requests.pop(user_id)
         
     def brekotkin(self, message):
+        self.bot.delete_message(message)
         self.bot.send_sticker(message.chat.id, 'CAACAgIAAxUAAWeWoeYf-5vui6OHXEb8vnX1obM_AAJMaAAC-iC4SEoPeyXlvEOhNgQ')
 
     def setup_handlers(self):
