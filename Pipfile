@@ -8,6 +8,7 @@ pymongo = "*"
 python-dotenv = "*"
 pytelegrambotapi = "*"
 schedule = "*"
+apscheduler = "*"
 
 [dev-packages]
 

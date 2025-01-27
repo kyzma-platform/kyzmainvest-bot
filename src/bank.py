@@ -1,10 +1,9 @@
-import schedule
-import time
 from bot.bot_replies import bot_replies
 import telebot
 from os import getenv
 from database import MongoDB
-import threading
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
 
 class Bank:
     def __init__(self):
@@ -12,32 +11,33 @@ class Bank:
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
         self.admin_id = int(getenv("ADMIN_ID"))
         self.database = MongoDB()
-
-        schedule.every().hour.do(self.apply_interest_to_all_users)
-
-        self.start_scheduler()
-
-    def start_scheduler(self):
-        """Start a separate thread for the schedule to run independently."""
-        def run_scheduler():
-            while True:
-                schedule.run_pending()
-                time.sleep(1)
-
-        threading.Thread(target=run_scheduler, daemon=True).start()
+        self.scheduler = BackgroundScheduler(jobstores={"default": MemoryJobStore()})
+        self.setup_scheduler()
+                
+    def setup_scheduler(self):
+        """ Setup the scheduler to apply hourly compound interest """
+        self.scheduler.add_job(self.apply_interest_to_all_users, 'interval', hours=1, replace_existing=True, id="interest_job")
+        self.scheduler.start()
 
     def log(self, message, user_id):
         """ Log messages to the admin in bot chat """
-        user_access_level = self.database.get_access_level(user_id)
-        if user_access_level == "user":
-            self.bot.send_message(self.admin_id, message)
+        try:
+            user_access_level = self.database.get_access_level(user_id)
+            if user_access_level == "user":
+                self.bot.send_message(self.admin_id, message)
+        except Exception as e:
+            print(f"Failed to log message: {e}")
 
     def calculate_hourly_compound_interest(self, principal, annual_rate, hours):
         """ Calculate the compound interest applied every hour """
-        n = 24  # Number of compounding periods per year (hourly)
-        t = hours / 24  # Time in years
-        amount = principal * (1 + annual_rate / n) ** (n * t)
-        return round(amount)
+        try:
+            n = 24  # Number of compounding periods per year (hourly)
+            t = hours / 24  # Time in years
+            amount = principal * (1 + annual_rate / n) ** (n * t)
+            return round(amount)
+        except Exception as e:
+            self.bot.send_message(self.admin_id, f"Error in interest calculation: {e}")
+            return principal
 
     def apply_interest_to_all_users(self):
         """ Apply hourly compound interest to all users' deposits """
@@ -45,20 +45,23 @@ class Bank:
             users = self.database.find_users()
             annual_rate = 0.05  # Example annual interest rate of 5%
             for user in users:
-                if 'deposit' in user:  # Ensure the user has a deposit field
+                user.setdefault('deposit', 0)
+                user.setdefault('coins', 0)
+                user.setdefault('debt', 0)
+
+                if user['deposit'] > 0:
                     principal = user['deposit']
                     new_amount = self.calculate_hourly_compound_interest(principal, annual_rate, 1)
                     user['deposit'] = new_amount
                     self.database.update_user(user['user_id'], user)
-                    self.bot.send_message(self.admin_id, f"Interest applied to {user['nickname']}: {user['deposit']}")
+                    self.bot.send_message(self.admin_id, f"Interest applied to {user.get('nickname', 'Unknown')}: {user['deposit']}")
         except Exception as e:
             self.bot.send_message(self.admin_id, f"Error in applying interest: {e}")
 
-    
     def deposit_money(self, message):
         """ Deposit money into the user's deposit account """
         user_id = message.from_user.id
-        user = self.database.find_user_id(user_id)
+        user = self.database.find_user_id(user_id) or {'coins': 0, 'deposit': 0}
 
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():

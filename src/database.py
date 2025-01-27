@@ -9,6 +9,7 @@ class MongoDB:
         self.client = MongoClient(getenv('MONGODB'))
         self.db = self.client['kyzma']
         self.users_collection = self.db['users']
+        self.admin = getenv('ADMIN_ID')
         
     def find_users(self):
         """ Find all users in database. Returns list of dictionaries"""
@@ -42,17 +43,21 @@ class MongoDB:
             print(f"User {username} already exists")
             return f"User {username} already exists"
         else:
-            new_user = {
-                'user_id': user_id,
-                'nickname': username,
-                'coins': 0,
-                'last_farm_time': 0,
-                'access_level': 'user',
-                'debt': 0,
-                'debt_limit_reached': False,
-                'name': name,
-            }
-            self.users_collection.insert_one(new_user)
+            try:
+                new_user = {
+                    'user_id': user_id,
+                    'nickname': f"@{username}",
+                    'coins': 0,
+                    'last_farm_time': 0,
+                    'access_level': 'user',
+                    'debt': 0,
+                    'debt_limit_reached': False,
+                    'name': name,
+                }
+                self.users_collection.insert_one(new_user)
+            except Exception as e:
+                self.bot.send_message(self.admin, f"Error adding user {username}: {e}")
+                return f"Error adding user {username}: {e}"
             print(f"User {username} added")
             return f"User {username} added"
         
