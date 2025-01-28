@@ -7,7 +7,6 @@ from games.farm import Farm
 from bank import Bank
 # from admin_handler import AdminHandler
 
-from dotenv import load_dotenv
 from os import getenv
 import telebot
 from telebot import types
@@ -19,7 +18,6 @@ class Handlers:
     """ Class for handling bot commands"""
     def __init__(self):
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
-        load_dotenv()
         self.database = MongoDB()
         self.roulette = Roulette()
         self.slots = Slots()
@@ -34,12 +32,12 @@ class Handlers:
         self.bot_replies = bot_replies
         self.set_commands()
         
-    def log(self, message, user_id):
+    def log(self, message):
         """ Log messages to the admin in bot chat 
 
             log(message, user_id)
         """
-        user_access_level = self.database.get_access_level(user_id)
+        user_access_level = self.database.get_access_level(message.from_user.id)
         if user_access_level == "user":
             self.bot.send_message(self.admin_id, message)
         
@@ -62,7 +60,7 @@ class Handlers:
         self.database.add_user(username, user_id, name=None)
             
         self.bot.reply_to(message, self.bot_replies['welcome'], reply_markup=self.create_keyboard())
-        self.log(f"User {username} started the bot", user_id)
+        self.log(f"User {username} started the bot")
         
         
     def send_help(self, message):
@@ -77,7 +75,7 @@ class Handlers:
                 help_text += "/" + key + ": "
                 help_text += self.user_bot_commands[key] + "\n"
         self.bot.reply_to(message, help_text)
-        self.log(f"User {message.from_user.username} used /help", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /help")
                 
     def send_top_users(self, message):
         """ Send top 10 users by coins, excluding the admin """
@@ -96,7 +94,7 @@ class Handlers:
             top_users_message = self.bot_replies['error_no_users']
         
         self.bot.reply_to(message, top_users_message)
-        self.log(f"User {message.from_user.username} used /top", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /top")
         
     def send_debtors(self, message):
         """ Send a list of users with debt in descending order """
@@ -123,7 +121,7 @@ class Handlers:
             debtors_message = "Никто не имеет задолженностей."
         
         self.bot.send_message(message.chat.id, debtors_message)
-        self.log(f"User {message.from_user.username} used /goys", message.from_user.id)
+        self.log(f"User {message.from_user.username} used /goys")
     
     def setup_schedules(self):
         """ Setup the daily reminder to send debt reminders """
@@ -201,7 +199,7 @@ class Handlers:
             game_result = self.farm.farm_coin(message, user, current_time)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User {message.from_user.username} farmed {game_result} coins.\n\nTotal: {user['coins']}", user_id)
+                self.log(f"User {message.from_user.username} farmed {game_result} coins.\n\nTotal: {user['coins']}")
             else:
                 print("Game result is None, skipping database update.")
             
@@ -217,7 +215,7 @@ class Handlers:
             game_result = self.slots.slot_machine(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User {message.from_user.username} played slots.", user_id)
+                self.log(f"User {message.from_user.username} played slots.")
             else:
                 print("Game result is None, skipping database update.")
             
@@ -228,7 +226,7 @@ class Handlers:
             game_result = self.roulette.roulette_game(message, user)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User {message.from_user.username} played roulette.", user_id)
+                self.log(f"User {message.from_user.username} played roulette.")
             else:
                 print("Game result is None, skipping database update.")
             
@@ -298,5 +296,6 @@ class Handlers:
             parts = message.text.split()
             if parts[0] == "кузьма" or parts[0] == "Кузьма":
                 self.bot.send_message(self.admin_id, f"@{username}: {message.text}")
+                self.bot.reply_to(message, "Сообщение отправлено администратору.")
                 
         threading.Thread(target=self.setup_schedules, daemon=True).start()

@@ -153,10 +153,11 @@ class AdminHandler:
             return
         
         bot_message = parts[1]
-        chat_id = -1002335695571
+        # chat_id = -1002335695571
+        chat_id = -4596713346
         
         try:
-            self.bot.send_message(chat_id, bot_message)
+            self.bot.send_message(chat_id, bot_message, parse_mode="HTML")
             self.bot.reply_to(message, "Потужне повидомлення було надислано.")
         except Exception as e:
             self.bot.reply_to(message, f"Помылка: {e}")

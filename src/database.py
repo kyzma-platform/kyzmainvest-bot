@@ -1,11 +1,9 @@
 from pymongo import MongoClient
-from dotenv import load_dotenv
 from os import getenv
 
 class MongoDB:
     """ Class for working with MongoDB"""
     def __init__(self):
-        load_dotenv()
         self.client = MongoClient(getenv('MONGODB'))
         self.db = self.client['kyzma']
         self.users_collection = self.db['users']
@@ -61,12 +59,12 @@ class MongoDB:
             print(f"User {username} added")
             return f"User {username} added"
         
-    def update_user(self, user_id, update):
+    def update_user(self, user_id, updated_data):
         """ Update user data. Takes id and dictionary with fields to update """
-        if '_id' in update:
-            update.pop('_id')
-        self.users_collection.update_one({"user_id": user_id}, {"$set": update})
-        return f"User {user_id} updated {update}"
+        if '_id' in updated_data:
+            updated_data.pop('_id')
+        self.users_collection.update_one({"user_id": user_id}, {"$set": updated_data})
+        return f"User {user_id} updated {updated_data}"
     
     def add_new_field(self):
         self.users_collection.update_many(

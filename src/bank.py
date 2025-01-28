@@ -17,44 +17,41 @@ class Bank:
     def setup_scheduler(self):
         """ Setup the scheduler to apply hourly compound interest """
         self.scheduler.add_job(self.apply_interest_to_all_users, 'interval', hours=1, replace_existing=True, id="interest_job")
+        self.scheduler.add_job(self.remind_debtors, 'interval', hours=12, replace_existing=True, id="debt_reminder_job")
         self.scheduler.start()
 
-    def log(self, message, user_id):
+    def log(self, message):
         """ Log messages to the admin in bot chat """
         try:
-            user_access_level = self.database.get_access_level(user_id)
-            if user_access_level == "user":
-                self.bot.send_message(self.admin_id, message)
+            self.bot.send_message(self.admin_id, message)
         except Exception as e:
             print(f"Failed to log message: {e}")
 
     def calculate_hourly_compound_interest(self, principal, annual_rate, hours):
-        """ Calculate the compound interest applied every hour """
         try:
-            n = 24  # Number of compounding periods per year (hourly)
-            t = hours / 24  # Time in years
+            if principal <= 0:
+                return 0  # Депозит не может быть отрицательным
+            n = 24
+            t = hours / 24
             amount = principal * (1 + annual_rate / n) ** (n * t)
-            return round(amount)
+            return max(round(amount), 0)  # Защита от отрицательных значений
         except Exception as e:
             self.bot.send_message(self.admin_id, f"Error in interest calculation: {e}")
             return principal
 
     def apply_interest_to_all_users(self):
-        """ Apply hourly compound interest to all users' deposits """
         try:
             users = self.database.find_users()
-            annual_rate = 0.05  # Example annual interest rate of 5%
+            annual_rate = 0.05
             for user in users:
                 user.setdefault('deposit', 0)
-                user.setdefault('coins', 0)
-                user.setdefault('debt', 0)
-
                 if user['deposit'] > 0:
+                    self.log(f"Before interest {user['nickname']}: {user['deposit']}")
                     principal = user['deposit']
                     new_amount = self.calculate_hourly_compound_interest(principal, annual_rate, 1)
                     user['deposit'] = new_amount
                     self.database.update_user(user['user_id'], user)
-                    self.bot.send_message(self.admin_id, f"Interest applied to {user.get('nickname', 'Unknown')}: {user['deposit']}")
+                    self.log(f"After interest {user['nickname']}: {user['deposit']}")
         except Exception as e:
             self.bot.send_message(self.admin_id, f"Error in applying interest: {e}")
 
@@ -84,7 +81,7 @@ class Bank:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы успешно положили {amount} KyZmaCoin на депозит. Ваш текущий депозит: {user['deposit']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} deposited {amount} coins into their deposit", user_id)
+        self.log(f"User @{message.from_user.username} deposited {amount} coins into their deposit")
 
     def withdraw_money(self, message):
         """ Withdraw money from the user's deposit account """
@@ -112,7 +109,7 @@ class Bank:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы успешно сняли {amount} KyZmaCoin с депозита. Ваш текущий депозит: {user['deposit']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} withdrew {amount} coins from their deposit", user_id)
+        self.log(f"User @{message.from_user.username} withdrew {amount} coins from their deposit")
 
     def check_balance(self, message, user_id):
         """ Check the user's balance """
@@ -146,7 +143,7 @@ class Bank:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы взяли {amount} KyZmaCoin в долг. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins", user_id)
+        self.log(f"User @{message.from_user.username} took a dept {user['debt']} coins")
 
     def repay_debt(self, message):
         user_id = message.from_user.id
@@ -182,13 +179,13 @@ class Bank:
 
         self.database.update_user(user_id, user)
         self.bot.reply_to(message, f"Вы погасили {amount} KyZmaCoin. Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User {message.from_user.username} repayed debt {amount} coins.", user_id)
+        self.log(f"User {message.from_user.username} repayed debt {amount} coins.")
 
     def check_debt(self, message):
         user_id = message.from_user.id
         user = self.database.find_user_id(user_id)
         self.bot.reply_to(message, f"Ваш текущий долг: {user['debt']} KyZmaCoin.")
-        self.log(f"User {message.from_user.username} checked their debt", user_id)
+        self.log(f"User {message.from_user.username} checked their debt")
 
     def remind_debtors(self):
         """ Send a reminder to all users who have a debt """
@@ -198,7 +195,7 @@ class Bank:
         for debtor in debtors:
             message = f"Шановний/шановна {debtor['name']},\n\nПовідомляємо, що Ваш борг перед KyZma InVest становить {debtor['debt']} KyZmaCoin. Ми настійно просимо Вас погасити зазначену суму у найкоротші терміни. У разі неповернення боргу, ми будемо змушені вжити відповідних заходів.\n\nДля оплати боргу скористайтеся командою /repay.\n\nЗ повагою,\n\nАдміністрація KyZma InVest"
             self.bot.send_message(debtor['user_id'], message)
-            self.log(f"Sent debt reminder to {debtor['nickname']}", debtor['user_id'])
+            self.log(f"Sent debt reminder to {debtor['nickname']}")
 
     def transfer_coins(self, message):
         """ Transfer coins between users """
@@ -238,4 +235,4 @@ class Bank:
         self.bot.send_message(recipient['user_id'], f"Вам перевели {amount} KyZmaCoin от {sender['nickname']}.")
 
         # Log the transaction
-        self.log(f"User {sender['nickname']} transferred {amount} coins to @{recipient['nickname']}", sender_id)
+        self.log(f"User {sender['nickname']} transferred {amount} coins to @{recipient['nickname']}")
