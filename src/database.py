@@ -46,10 +46,15 @@ class MongoDB:
             self._log_error(f"Error adding user {username}: {e}")
             return f"Error adding user {username}: {e}"
         
-    def update_user(self, user_id, **updated_data):
+    def update_user(self, user_id, updated_data):
         """ Update user data. Takes id and dictionary with fields to update """
+        
+        # Удаляем поле `_id`, если оно есть
+        updated_data.pop("_id", None)
+        
         self.users_collection.update_one({"user_id": user_id}, {"$set": updated_data})
         return f"User {user_id} updated"
+
     
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None """
