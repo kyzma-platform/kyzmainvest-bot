@@ -33,13 +33,11 @@ class Handlers:
         self.set_commands()
         
     def log(self, message):
-        """ Log messages to the admin in bot chat 
-
-            log(message, user_id)
-        """
-        user_access_level = self.database.get_access_level(message.from_user.id)
-        if user_access_level == "user":
+        """ Log messages to the admin in bot chat """
+        try:
             self.bot.send_message(self.admin_id, message)
+        except Exception as e:
+            print(f"Failed to log message: {e}")
         
     def set_commands(self):
         """ Set bot commands"""

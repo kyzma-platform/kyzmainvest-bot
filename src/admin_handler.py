@@ -62,6 +62,7 @@ class AdminHandler:
             f"Last farm time: {user['last_farm_time']}\n"
             f"Access level: {user['access_level']}\n"
             f"Debt: {user['debt']}"
+            f"Deposit: {user['deposit']}"
         )
         self.bot.send_message(message.chat.id, response_message)
 
@@ -153,8 +154,8 @@ class AdminHandler:
             return
         
         bot_message = parts[1]
-        # chat_id = -1002335695571
-        chat_id = -4596713346
+        chat_id = -1002335695571
+        # chat_id = -4596713346
         
         try:
             self.bot.send_message(chat_id, bot_message, parse_mode="HTML")
