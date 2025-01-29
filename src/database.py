@@ -14,9 +14,14 @@ class MongoDB:
         """ Find all users in database. Returns list of dictionaries """
         return [self._convert_id(user) for user in self.users_collection.find({})]
     
-    def find_user(self, **kwargs):
+    def find_user_id(self, user_id):
         """ Find user by key-value pair. Returns user dictionary or None """
-        user = self.users_collection.find_one(kwargs)
+        user = self.users_collection.find_one({"user_id": user_id})
+        return self._convert_id(user) if user else None
+    
+    def find_user_nickname(self, nickname):
+        """ Find user by key-value pair. Returns user dictionary or None """
+        user = self.users_collection.find_one({"nickname": nickname})
         return self._convert_id(user) if user else None
     
     def add_user(self, username, user_id, name):
@@ -48,12 +53,17 @@ class MongoDB:
     
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None """
-        user = self.find_user(user_id=user_id)
+        user = self.find_user_id(user_id)
         return user['access_level'] if user else None
     
-    def find_party(self, **kwargs):
+    def find_party_name(self, party_name):
         """ Find party by key-value pair. Returns party dictionary or None """
-        party = self.parties_collection.find_one(kwargs)
+        party = self.parties_collection.find_one({"party_name": party_name})
+        return self._convert_id(party) if party else None
+
+    def find_party_id(self, party_id):
+        """ Find party by key-value pair. Returns party dictionary or None """
+        party = self.parties_collection.find_one({"party_creator": party_id})
         return self._convert_id(party) if party else None
     
     def add_party(self, party_name, party_creator):
@@ -81,7 +91,7 @@ class MongoDB:
     
     def add_party_member(self, party_name, user_id):
         """ Add user to the party. Takes party name and user id """
-        party = self.find_party(party_name=party_name)
+        party = self.find_party_name(party_name)
         if not party:
             return f"Party {party_name} not found"
         
@@ -90,7 +100,8 @@ class MongoDB:
         
         party['party_members'].append(user_id)
         self.update_party(party_name, party_members=party['party_members'])
-        return f"User {user_id} added to party {party_name}"
+        user = self.find_user_id(user_id)
+        return f"Гражданин {user['nickname']} успешно попал в партию {party_name}!"
     
     def remove_party_member(self, party_name, user_id):
         """ Remove user from the party. Takes party name and user id """

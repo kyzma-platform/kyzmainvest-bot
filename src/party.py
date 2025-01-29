@@ -79,6 +79,23 @@ class Party:
             party_name = parts[1]
             party_creator = self.get_party_creator(party_name)
             self.bot.reply_to(message, f"Party {party_name} creator: {party_creator}" if party_creator else f"Party {party_name} not found")
+            
+        @self.bot.message_handler(func=lambda message: message.reply_to_message and message.text.lower() == "добавить в партию")
+        def add_party_member_reply_handler(message):
+            replied_user_id = message.reply_to_message.from_user.id  # ID пользователя, на сообщение которого ответили
+            party_creator_id = message.from_user.id  # ID отправителя команды (должен быть владельцем партии)
+            print(replied_user_id, party_creator_id)
+            
+            # Ищем партию, которую создал этот пользователь
+            party = self.database.find_party_id(party_creator_id)  # Предполагается, что есть такой метод
+            if not party:
+                self.bot.reply_to(message, "Вы не являетесь владельцем ни одной партии.")
+                return
+
+            party_name = party["party_name"]  # Если у владельца только одна партия
+            result = self.add_party_member(party_name, replied_user_id)
+            
+            self.bot.reply_to(message, result)
                 
         print("Party handlers are ready")
         
