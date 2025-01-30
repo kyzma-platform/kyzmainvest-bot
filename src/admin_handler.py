@@ -168,6 +168,10 @@ class AdminHandler:
         except Exception as e:
             self.bot.reply_to(message, f"Помылка: {e}")
             
+    def show_budjet(self, message):
+        budget = self.database.find_user_id(self.budget)
+        response_message = f"Бюджет: {budget['coins']} coins"
+        self.bot.send_message(message.chat.id, response_message)
         
     def setup_admin_handler(self):
         @self.bot.message_handler(commands=["rozdacha"])
@@ -201,3 +205,7 @@ class AdminHandler:
         @self.bot.message_handler(commands=['mafia'], access_level=['owner', 'admin'])
         def send_to_mafia(message):
             self.send_message_to_mafia(message)
+            
+        @self.bot.message_handler(commands=['budget'], access_level=['owner', 'admin'])
+        def show_budget(message):
+            self.show_budjet(message)
