@@ -22,6 +22,7 @@ class AdminHandler:
         self.bot_commands = admin_bot_commands
         self.bot_replies = bot_replies
         self.owner = getenv("ADMIN_ID")
+        self.budget = 5587251063
 
     def give_all_users_1000_coins(self, message):
         """Give 1000 coins to all users."""
@@ -61,7 +62,7 @@ class AdminHandler:
             f"Coins: {user['coins']}\n"
             f"Last farm time: {user['last_farm_time']}\n"
             f"Access level: {user['access_level']}\n"
-            f"Debt: {user['debt']}"
+            f"Debt: {user['debt']}\n"
             f"Deposit: {user['deposit']}"
         )
         self.bot.send_message(message.chat.id, response_message)
@@ -102,8 +103,12 @@ class AdminHandler:
                 self.bot.reply_to(message, "Пользователь не найден.")
                 return
 
+            budget = self.database.find_user_id(self.budget)
+
             user["coins"] -= amount
+            budget["coins"] += amount
             self.database.update_user(user["user_id"], user)
+            self.database.update_user(self.budget, budget)
             self.bot.reply_to(message, f"Вы успешно забрали {amount} монет у пользователя {nickname}.")
         except ValueError:
             self.bot.reply_to(message, "Сумма должна быть числом.")

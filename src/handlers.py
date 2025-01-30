@@ -5,7 +5,6 @@ from games.roulette import Roulette
 from games.slots import Slots
 from games.farm import Farm
 from bank import Bank
-# from admin_handler import AdminHandler
 
 from os import getenv
 import telebot
@@ -23,8 +22,8 @@ class Handlers:
         self.slots = Slots()
         self.farm = Farm()
         self.bank = Bank()
-        # self.admin_handler = AdminHandler()
         self.admin_id = getenv("ADMIN_ID")
+        self.budget = 5587251063
         self.amnesty_requests = {}
                 
         self.user_bot_commands = user_bot_commands
@@ -182,7 +181,7 @@ class Handlers:
         @self.bot.message_handler(commands=['start'])
         def start(message):
             self.start(message)
-            self.database.add_new_field()
+            # self.database.add_new_field()
             
         @self.bot.message_handler(commands=['help'])
         def help(message):
@@ -292,8 +291,17 @@ class Handlers:
             username = message.from_user.username or "Unknown"
             print("Message received: ", message.text)
             parts = message.text.split()
+            user = self.database.find_user_id(message.from_user.id)
+            budget = self.database.find_user_id(self.budget)
             if parts[0] == "кузьма" or parts[0] == "Кузьма":
-                self.bot.send_message(self.admin_id, f"@{username}: {message.text}")
-                self.bot.reply_to(message, "Сообщение отправлено администратору.")
-                
+                if user:
+                    self.database.update_user(message.from_user.id, {"coins": user["coins"] - 1})
+                    self.database.update_user(self.budget, {"coins": budget["coins"] + 1})
+                    self.bot.send_message(self.admin_id, f"@{username}: {message.text}")
+                    self.bot.reply_to(message, "Сообщение отправлено администратору.")
+                elif not user:
+                    self.bot.reply_to(message, "Вы не зарегистрированы в KyZma InVest. Используйте /start для регистрации.")
+                else:
+                    self.bot.reply_to(message, "Вам не хватает коинсов для обращения к администрации KyZma InVest.")
+
         threading.Thread(target=self.setup_schedules, daemon=True).start()

@@ -26,7 +26,7 @@ class MongoDB:
     
     def add_user(self, username, user_id, name):
         """ Add user to the database. Takes username and id """
-        if self.find_user(user_id=user_id):
+        if self.find_user_id(user_id):
             return f"User {username} already exists"
         
         new_user = {
@@ -38,6 +38,8 @@ class MongoDB:
             'debt': 0,
             'debt_limit_reached': False,
             'name': name,
+            'deposit': 0,
+            'grechka': 0,
         }
         try:
             self.users_collection.insert_one(new_user)
