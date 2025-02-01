@@ -10,7 +10,7 @@ class Farm:
     def __init__(self):
         self.bot_replies = bot_replies
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
-        self.farm_rare_coins = 200
+        self.farm_rare_coins = 600
         self.farm_rare_chance = 0.1
     
     def farm_coin(self, message, user, current_time):
@@ -29,7 +29,7 @@ class Farm:
                 if random.random() < self.farm_rare_chance:
                     coins = self.farm_rare_coins
                 else:
-                    coins = random.randint(20, 120)
+                    coins = random.randint(40, 480)
                 user['coins'] += coins
                 user['last_farm_time'] = current_time
                 print(f"User {user['nickname']} farmed {coins} coins. Total: {user['coins']}")

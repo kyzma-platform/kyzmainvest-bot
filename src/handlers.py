@@ -181,7 +181,7 @@ class Handlers:
         @self.bot.message_handler(commands=['start'])
         def start(message):
             self.start(message)
-            # self.database.add_new_field()
+            # self.database.add_new_field('party', None)
             
         @self.bot.message_handler(commands=['help'])
         def help(message):

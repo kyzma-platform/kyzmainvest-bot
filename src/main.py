@@ -10,9 +10,9 @@ class Bot:
         self.party = Party(self.bot)
         
     def run_bot(self):
+        self.party.setup_party_handlers()
         self.admin_handlers.setup_admin_handler()
         self.bot.add_custom_filter(AccessLevel())
-        self.party.setup_party_handlers()
         self.handlers.setup_handlers()
         self.handlers.set_commands()
         self.bot.infinity_polling(skip_pending=True)

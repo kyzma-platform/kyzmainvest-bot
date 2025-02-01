@@ -15,17 +15,17 @@ class MongoDB:
         return [self._convert_id(user) for user in self.users_collection.find({})]
     
     def find_user_id(self, user_id):
-        """ Find user by key-value pair. Returns user dictionary or None """
+        """ Find user by user_id. Returns user dictionary or None """
         user = self.users_collection.find_one({"user_id": user_id})
         return self._convert_id(user) if user else None
     
     def find_user_nickname(self, nickname):
-        """ Find user by key-value pair. Returns user dictionary or None """
+        """ Find user by nickname. Returns user dictionary or None """
         user = self.users_collection.find_one({"nickname": nickname})
         return self._convert_id(user) if user else None
     
     def add_user(self, username, user_id, name):
-        """ Add user to the database. Takes username and id """
+        """ Add user to the database. Takes username and user_id """
         if self.find_user_id(user_id):
             return f"User {username} already exists"
         
@@ -40,43 +40,44 @@ class MongoDB:
             'name': name,
             'deposit': 0,
             'grechka': 0,
+            'party': None,
         }
         try:
             self.users_collection.insert_one(new_user)
-            return f"User {username} added"
+            return f"User {username} added successfully"
         except Exception as e:
             self._log_error(f"Error adding user {username}: {e}")
             return f"Error adding user {username}: {e}"
         
     def update_user(self, user_id, updated_data):
-        """ Update user data. Takes id and dictionary with fields to update """
-        
-        # Удаляем поле `_id`, если оно есть
-        updated_data.pop("_id", None)
-        
+        """ Update user data. Takes user_id and dictionary with fields to update """
         self.users_collection.update_one({"user_id": user_id}, {"$set": updated_data})
-        return f"User {user_id} updated"
-
+        return f"User {user_id} updated successfully"
     
+    def add_new_field(self, field_name, default_value):
+        """ Add new field to all users in the database. Takes field name and default value """
+        self.users_collection.update_many({}, {"$set": {field_name: default_value}})
+        return f"Field {field_name} added successfully"
+
     def get_access_level(self, user_id):
         """ Returns the access level of the user. Returns: 'admin', 'user' or None """
         user = self.find_user_id(user_id)
         return user['access_level'] if user else None
     
     def find_party_name(self, party_name):
-        """ Find party by key-value pair. Returns party dictionary or None """
+        """ Find party by party_name. Returns party dictionary or None """
         party = self.parties_collection.find_one({"party_name": party_name})
         return self._convert_id(party) if party else None
 
     def find_party_id(self, party_id):
-        """ Find party by key-value pair. Returns party dictionary or None """
+        """ Find party by creator's user_id. Returns party dictionary or None """
         party = self.parties_collection.find_one({"party_creator": party_id})
         return self._convert_id(party) if party else None
     
     def add_party(self, party_name, party_creator):
-        """ Add party to the database. Takes party name and creator id """
-        if self.find_party(party_name=party_name):
-            return f"Party {party_name} already exists"
+        """ Add party to the database. Takes party name and creator's user_id """
+        if self.find_party_name(party_name):
+            return f"Партия с таким именем уже существует."
         
         new_party = {
             'party_name': party_name,
@@ -86,42 +87,47 @@ class MongoDB:
         }
         try:
             self.parties_collection.insert_one(new_party)
-            return f"Поздравляем! Партия {party_name} была успешно создана!"
+            return f"Поздравляем! Партия {party_name} была успешно зарегистрирована!"
         except Exception as e:
             self._log_error(f"Error adding party {party_name}: {e}")
-            return f"Возникла ошибка при создании партии: {party_name}: {e}"
+            return f"Error creating party {party_name}: {e}"
     
     def update_party(self, party_name, **updated_data):
-        """ Update party data. Takes name and dictionary with fields to update """
+        """ Update party data. Takes party_name and dictionary with fields to update """
+        updated_data.pop("_id", None)
         self.parties_collection.update_one({"party_name": party_name}, {"$set": updated_data})
-        return f"Party {party_name} updated"
+        return f"Party {party_name} updated successfully"
     
     def add_party_member(self, party_name, user_id):
-        """ Add user to the party. Takes party name and user id """
+        """ Add user to the party. Takes party_name and user_id """
         party = self.find_party_name(party_name)
+        user = self.find_user_id(user_id)
         if not party:
-            return f"Party {party_name} not found"
+            return f"Партия {party_name} не найдена."
         
         if user_id in party['party_members']:
-            return f"User {user_id} already in party {party_name}"
+            return f"Гражданин {user['nickname']} уже состоит в партии {party_name}."
         
         party['party_members'].append(user_id)
         self.update_party(party_name, party_members=party['party_members'])
         user = self.find_user_id(user_id)
-        return f"Гражданин {user['nickname']} успешно попал в партию {party_name}!"
+        self.update_user(user_id, party=party_name)
+        return f"Гражданин {user['nickname']} успешно присоиденился к партии {party_name}!"
     
     def remove_party_member(self, party_name, user_id):
-        """ Remove user from the party. Takes party name and user id """
-        party = self.find_party(party_name=party_name)
+        """ Remove user from the party. Takes party_name and user_id """
+        party = self.find_party_name(party_name)
         if not party:
-            return f"Party {party_name} not found"
+            return f"Партия {party_name} не найдена."
         
         if user_id not in party['party_members']:
-            return f"User {user_id} not in party {party_name}"
+            return f"Гражданин {user_id} не состоит в партии {party_name}."
         
         party['party_members'].remove(user_id)
         self.update_party(party_name, party_members=party['party_members'])
-        return f"User {user_id} removed from party {party_name}"
+        user = self.find_user_id(user_id)
+        self.update_user(user_id, party=None)
+        return f"Гражданин {user['nickname']} был изгнан с партии {party_name}."
     
     def _convert_id(self, document):
         """ Convert ObjectId to string for JSON serialization """
@@ -132,5 +138,5 @@ class MongoDB:
     def _log_error(self, message):
         """ Log error message to admin """
         if self.admin:
-            self.bot.send_message(self.admin, message)
+            print(f"Admin ({self.admin}) Notification: {message}")
         print(message)
