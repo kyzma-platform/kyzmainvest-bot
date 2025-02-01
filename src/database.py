@@ -51,6 +51,7 @@ class MongoDB:
         
     def update_user(self, user_id, updated_data):
         """ Update user data. Takes user_id and dictionary with fields to update """
+        updated_data.pop('_id', None)
         self.users_collection.update_one({"user_id": user_id}, {"$set": updated_data})
         return f"User {user_id} updated successfully"
     
