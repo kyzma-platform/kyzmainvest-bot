@@ -196,7 +196,7 @@ class Handlers:
             game_result = self.farm.farm_coin(message, user, current_time)
             if game_result is not None:
                 self.database.update_user(user_id, game_result)
-                self.log(f"User {message.from_user.username} farmed {game_result} coins.\n\nTotal: {user['coins']}")
+                self.log(f"User {message.from_user.username} farmed coins.\n\nTotal: {user['coins']}")
             else:
                 print("Game result is None, skipping database update.")
             

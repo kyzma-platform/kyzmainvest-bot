@@ -112,7 +112,8 @@ class MongoDB:
         party['party_members'].append(user_id)
         self.update_party(party_name, party_members=party['party_members'])
         user = self.find_user_id(user_id)
-        self.update_user(user_id, party=party_name)
+        updated_data = {'party': party_name}
+        self.update_user(user_id, updated_data)
         return f"Гражданин {user['nickname']} успешно присоиденился к партии {party_name}!"
     
     def remove_party_member(self, party_name, user_id):

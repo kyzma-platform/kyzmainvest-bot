@@ -12,10 +12,13 @@ class Farm:
         self.bot = telebot.TeleBot(getenv("BOT_TOKEN"))
         self.farm_rare_coins = 600
         self.farm_rare_chance = 0.1
+        self.tax = 0.4
     
     def farm_coin(self, message, user, current_time):
         """ Farm coins for the user"""
         coins = 0
+        coins_tax = 0
+        coins_after_tax = 0
         
         if user is None:
             self.bot.reply_to(message, self.bot_replies['error_database'])
@@ -30,8 +33,16 @@ class Farm:
                     coins = self.farm_rare_coins
                 else:
                     coins = random.randint(40, 480)
-                user['coins'] += coins
+                    coins_tax = round(coins * self.tax)
+                    coins_after_tax = coins - coins_tax
+                print(coins_after_tax)
+                user['coins'] += coins_after_tax
                 user['last_farm_time'] = current_time
                 print(f"User {user['nickname']} farmed {coins} coins. Total: {user['coins']}")
-                self.bot.reply_to(message, f"Вы заработали {coins} KyZmaCoin! У вас теперь {user['coins']} KyZmaCoin.")
+                self.bot.reply_to(message,
+                    f"Вы заработали {coins} KyZmaCoin\n"
+                    f"Налог: {coins_tax} KyZmaCoin\n"
+                    f"Зарплата после налога: {coins - coins_tax} KyZmaCoin\n" 
+                    f"Итоговая сумма: {user['coins']} KyZmaCoin\n"
+                    f"Вы сможете снова фармить через 1 час")
                 return user
