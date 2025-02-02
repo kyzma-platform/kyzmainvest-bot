@@ -43,6 +43,7 @@ class Farm:
                 print(coins_after_tax)
                 budget = self.database.find_user_id(self.budget)
                 budget['coins'] += coins_tax
+                self.database.update_user(self.budget, budget)
                 user['coins'] += coins_after_tax
                 user['last_farm_time'] = current_time
                 print(f"User {user['nickname']} farmed {coins} coins. Total: {user['coins']}")
