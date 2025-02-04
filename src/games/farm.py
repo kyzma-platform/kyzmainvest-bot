@@ -36,6 +36,8 @@ class Farm:
             else:
                 if random.random() < self.farm_rare_chance:
                     coins = self.farm_rare_coins
+                    coins_tax = round(coins * self.tax)
+                    coins_after_tax = coins - coins_tax
                 else:
                     coins = random.randint(40, 480)
                     coins_tax = round(coins * self.tax)
